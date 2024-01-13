@@ -1,0 +1,129 @@
+#' Calculate a vector orthogonal to the normalized average difference of your time series.
+#'
+#' The steps are:
+#'   1. Take the last n values of your ts.
+#'   2. Take their difference.
+#'   3. Perform a 90 degree counter-clockwise rotation on (diff, 1) vectors.
+#'   4. Normalize each rotated vector.
+#'   5. Optionally weight each vector.
+#'   6. Add these vectors.
+#'   7. Normalize the total vector.
+#'
+#' @param ts The time series. Should be smooth/smoothed. e.g. dat$readings
+#' @param n The number of values at the end of the value column to include. Constraint: 1 < n < len(value)
+#' @param wts Optional weights for each difference.
+#'
+#' @returns tibble (1x2) Normalized orthogonal vector.
+#'
+#' @export
+calc_ortho_vec <- function(ts, n, wts = NULL) {
+  assert_that(n > 1, msg = "Need n > 1.")
+  validate_that(n < length(ts), msg = "n >= len(value); will yield NAs for diff calc.")
+  if (!(is.null(wts))) {
+    validate_that(length(n) == length(wts), msg = "Want one wt per difference.")
+  }
+  wts = ifelse(is.null(wts), 1, wts)
+
+  diffs = ts %>% difference() %>% as_tibble() %>% slice_tail(n = n)
+  rotated_vecs = tibble(x = -diffs, y = 1)  # 90deg counter-clock rot.
+  normed_rotated_vecs = rotated_vecs %>%  # TODO: extract
+    mutate(
+      vec_size = sqrt(x^2 + y^2),
+      x = x / vec_size,
+      y = y / vec_size
+    ) %>%
+    select(-vec_size)
+  weighted_normed_rotated_vecs = normed_rotated_vecs %>%
+    mutate(
+      x = x * wts,
+      y = y * wts
+    )
+  total_vec = weighted_normed_rotated_vecs %>%
+    summarise(
+      x = sum(x),
+      y = sum(y)
+    )
+  normed_total_vec = total_vec %>%
+    mutate(
+      vec_size = sqrt(x^2 + y^2),
+      x = x / vec_size,
+      y = y / vec_size
+    ) %>%
+    select(-vec_size)
+
+  normed_total_vec
+}
+
+#' Plot the output of `calc_ortho_vec`.
+#'
+#' @param normed_total_vec Output of `calc_ortho_vec`.
+#'
+#' @export
+plot_ortho_vec <- function(normed_total_vec) {
+  normed_total_vec = normed_total_vec %>% bind_rows(-normed_total_vec)  # Add vec in opposite dir.
+  normed_total_vec %>%
+    ggplot() +
+    geom_segment(
+      aes(x = 0, y = 0, xend = x, yend = y, color = "red"),
+      arrow = arrow(),
+      show.legend = FALSE
+    ) +
+    xlim(-1.2, 1.2) +
+    ylim(-1.2, 1.2)
+}
+
+#' Plot a smoothed time series with the orthogonal vector to its head overlaid.
+#'
+#' The orthogonal vector comes from `calc_ortho_vec`.
+#' The smoothed time series is, e.g. a `lowess` output.
+#'
+#' @param data Your data containing a smoothed time series.
+#' @param index The date/time column.
+#' @param value The column of smoothed values.
+#' @param n The `n` used in `calc_ortho_vec`.
+#' @param normed_total_vec Output of `calc_ortho_vec`.
+#' @param arrow_scale Scale of arrow. `1` = 1 unit of index, 1 unit of value.
+#'
+#' @export
+plot_data_with_ortho_vec <- function(data, index, value, n, normed_total_vec, arrow_scale = 1) {
+  data = data %>% as_tibble() %>% ungroup()  # tsibble keeps idx and keys linked.
+  data = data %>% mutate({{ index }} := as_datetime({{ index }}))
+  ortho_pts = data %>% slice_tail(n = n)
+  mid_pt = data %>% slice((n() - floor(n / 2)))
+
+  # Get "one" (diff b/w time units of index)
+  a = data %>% select({{ index }}) %>% slice(n() - 1) %>% pull()
+  b = data %>% select({{ index }}) %>% slice(n()) %>% pull()
+  dx = as.duration(lubridate::interval(a, b))
+  # Starting point of arrow vec
+  x0 = mid_pt %>% select({{ index }}) %>% pull()
+  y0 = mid_pt %>% select({{ value }}) %>% pull()
+  # Point arrow both ways.
+  normed_total_vec = normed_total_vec %>% bind_rows(-normed_total_vec)
+  # Resize stem len
+  normed_total_vec = normed_total_vec * arrow_scale
+
+  ggplot() +
+    geom_line(
+      data = data,
+      aes(x = {{ index }}, y = {{ value }})
+    ) +
+    geom_line(
+      data = ortho_pts,
+      aes(x = {{ index }}, y = {{ value }}),
+      show.legend = FALSE,
+      color = "blue"
+    ) +
+    geom_segment(
+      data = normed_total_vec,
+      aes(
+        x = x0,
+        y = y0,
+        xend = (x0 + (x * dx)),
+        yend = (y0 + y)
+      ),
+      arrow = arrow(length = unit(arrow_scale, "points")),
+      show.legend = FALSE,
+      color = "red"
+    )
+}

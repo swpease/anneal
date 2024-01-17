@@ -1,3 +1,54 @@
+#' Fragment your time series by seasons, with an overlap.
+#'
+#' A "fragment" is 1 or more prior seasons' of data, plus an overlap for annealing.
+#' This function is of the same ilk as `stretch_tsibble` from the `tsibble` package.
+#'
+#' @param data The data.
+#' @param n_overlap The number of time points to overlap. Must be positive integer.
+#' @param season_len The number of time points per season. Must be positive integer.
+#' @param include_partial_overlap Whether to include the final fragment if there is only partial overlap.
+#' @returns A tibble of fragments.
+#' @export
+digest <- function(data, n_overlap, season_len, include_partial_overlap = TRUE) {
+  assert_that(n_overlap > 0, msg = "Need n_overlap > 0.")
+  assert_that(season_len > 0, msg = "Need season_len > 0.")
+
+  data = data %>% mutate(idx = row_number())
+
+  # Remember: R indexes start at 1.
+  k = 1
+  df = NULL
+  t_max = data %>% select(idx) %>% max()
+  while (TRUE) {
+    i = t_max - (k * season_len) + 1  # `+ 1` needed
+    if (i <= 1) {
+      break  # Nothing to overlap with.
+    }
+
+    j = i - n_overlap
+    if (j <= 0) {
+      if (!include_partial_overlap) {
+        break
+      } else {
+        sprintf("Incomplete overlap for longest fragment. Missing %s of %s values.", (-j + 1), n_overlap)
+      }
+    }
+
+    j = max(j, 1)
+    fragment = data %>%
+      slice(j:n()) %>%
+      mutate(
+        k = k,
+        adj_idx = idx + (k * season_len)
+      )
+    df = bind_rows(df, fragment)
+    k = k + 1
+  }
+
+  df
+}
+
+
 #' Calculate a vector orthogonal to the normalized average difference of your time series.
 #'
 #' The steps are:

@@ -1,4 +1,21 @@
 # digest
+test_that("digest handles tsibbles", {
+  data = tibble(
+      x = 101:112,
+      datetime = as.Date("2017-01-01") + 0:11
+    ) %>%
+    as_tsibble()
+  expected = tibble(
+    x = c(107:112, 103:112),
+    datetime = c(as.Date("2017-01-07") + 0:5, as.Date("2017-01-03") + 0:9),
+    idx = c(7:12, 3:12),
+    k = c(rep(1,6), rep(2,10)),
+    adj_idx = c(11:16, 11:20)
+  )
+  out = digest(data, 2, 4)
+  expect_equal(out, expected)
+})
+
 test_that("digest, no partial overlaps", {
   data = tibble(x = 101:112)
   expected = tibble(

@@ -7,13 +7,20 @@
 #' @param n_overlap The number of time points to overlap. Must be positive integer.
 #' @param season_len The number of time points per season. Must be positive integer.
 #' @param include_partial_overlap Whether to include the final fragment if there is only partial overlap.
-#' @returns A tibble of fragments.
+#' @returns A tibble of fragments containing cols:
+#'   idx:     The index w.r.t the original data.
+#'   k:       The fragment (1 = 1 season back, etc.).
+#'   adj_idx: The fragment, aligned to the latest data.
+#'
 #' @export
 digest <- function(data, n_overlap, season_len, include_partial_overlap = TRUE) {
   assert_that(n_overlap > 0, msg = "Need n_overlap > 0.")
   assert_that(season_len > 0, msg = "Need season_len > 0.")
 
-  data = data %>% mutate(idx = row_number())
+  data = data %>%
+    as_tibble() %>%
+    ungroup() %>%
+    mutate(idx = row_number())
 
   # Remember: R indexes start at 1.
   k = 1

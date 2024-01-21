@@ -9,10 +9,10 @@ test_that("anneal", {
 
   fit_lm = lm(y ~ x, data = data)
   expected_fragments = tibble(
-    idx = rep(3:8, 3),
-    adj_idx = idx + 4,
+    idx_upsam = rep(3:8, 3),
+    adj_idx = idx_upsam + 4,
     k = 1,
-    .pred_obs = setNames(idx, rep(1:6,3)),  # ref: https://adv-r.hadley.nz/vectors-chap.html#attr-names
+    .pred_obs = setNames(idx_upsam, rep(1:6,3)),  # ref: https://adv-r.hadley.nz/vectors-chap.html#attr-names
     final_idx = c(6:11,7:12,8:13),
     shift = c(rep(-1,6),rep(0,6),rep(1,6)),
     datetime = c(

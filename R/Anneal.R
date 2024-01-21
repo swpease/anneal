@@ -18,7 +18,7 @@
 #'     final_idx = The index as aligned to the original data's indexes.
 #'     shift     = The shift along x-axis, relative you the `digest`'s `adj_idx`.
 #'                 `adj_idx` + `shift` = `final_idx`
-#'     datetime  =  The
+#'     datetime  = The `final_idx` in terms of the original data's datetime index.
 #'   ],
 #'   losses       = tibble[
 #'     shift     = The shift along x-axis, relative you the `digest`'s `adj_idx`.
@@ -30,16 +30,16 @@
 #' @export
 anneal <- function(data, digest, resolution, range_start, range_end, ortho_vec, loess_fit, loss_fn) {
   # TODO: digest group by here, or in digest?
-  data = data %>% mutate(idx = row_number())
+  data = data %>% mutate(idx_data = row_number())
   # TODO: drop loss col from digest
   # TODO: split by k
   fragment = digest
   pred_col_name = attr(loess_fit$terms, "term.labels")
   upsampled_fragment = tibble(
-    idx = seq(min(fragment$idx), max(fragment$idx), resolution),
+    idx_upsam = seq(min(fragment$idx), max(fragment$idx), resolution),
     adj_idx = seq(min(fragment$adj_idx), max(fragment$adj_idx), resolution),
     k = fragment %>% pull(k) %>% first(),
-    .pred_obs = predict(loess_fit, tibble({{ pred_col_name }} := idx))
+    .pred_obs = predict(loess_fit, tibble({{ pred_col_name }} := idx_upsam))
   )
 
   # want to move along x axis by `resolution`,
@@ -68,19 +68,19 @@ anneal <- function(data, digest, resolution, range_start, range_end, ortho_vec, 
 
     # Add date col.
     # how far beyond the "real" ts does our shifted fragment extend?
-    n_to_append = max(shifted_upsampled_fragment$final_idx) - max(data$idx)
+    n_to_append = max(shifted_upsampled_fragment$final_idx) - max(data$idx_data)
     # TODO: include this check?
     # assert_that(n_to_append > 0, msg = "Fragment doesn't extend beyond original series.")
     # extend our dates that far
     extended_dates = data %>%
       select(index(.)) %>%  # ref: https://magrittr.tidyverse.org/reference/pipe.html#using-the-dot-for-secondary-purposes
       append_row(n = n_to_append) %>%
-      mutate(idx = row_number())  # -> tsibble[date_col]
+      mutate(idx_dates = row_number())  # -> tsibble[date_col]
     # join
     shifted_upsampled_fragment <- left_join(
       shifted_upsampled_fragment,
       extended_dates,
-      by = join_by(final_idx == idx),
+      by = join_by(final_idx == idx_dates),
       relationship = "one-to-one"
     )  # date col will be whatever the `index` of the input `data` tsibble is.
 
@@ -88,7 +88,7 @@ anneal <- function(data, digest, resolution, range_start, range_end, ortho_vec, 
     overlap = inner_join(
       data,
       shifted_upsampled_fragment,
-      by = join_by(idx == final_idx)
+      by = join_by(idx_data == final_idx)
     )  # -> tsibble
     # TODO: check overlap [min,max]
     original_obs = overlap %>%

@@ -8,12 +8,19 @@ test_that("anneal", {
     as_tsibble()
 
   fit_lm = lm(y ~ x, data = data)
-  # expected = tibble(
-  #   x = c(107:112, 103:112),
-  #   idx = c(7:12, 3:12),
-  #   k = c(rep(1,6), rep(2,10)),
-  #   adj_idx = c(11:16, 11:20)
-  # )
+  expected_fragments = tibble(
+    idx = rep(3:8, 3),
+    adj_idx = idx + 4,
+    k = 1,
+    .pred_obs = setNames(idx, rep(1:6,3)),  # ref: https://adv-r.hadley.nz/vectors-chap.html#attr-names
+    final_idx = c(6:11,7:12,8:13),
+    shift = c(rep(-1,6),rep(0,6),rep(1,6)),
+    datetime = c(
+      as.Date("2017-01-06") + 0:5,
+      as.Date("2017-01-07") + 0:5,
+      as.Date("2017-01-08") + 0:5
+    )
+  )
   expected_losses = tibble(
     shift = c(-1,0,1),
     loss = c(3,4,5)
@@ -31,6 +38,7 @@ test_that("anneal", {
     loss_fn = rmse
     )
   expect_equal(out$losses, expected_losses)
+  expect_equal(out$fragments, expected_fragments)
 })
 
 # digest

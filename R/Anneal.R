@@ -1,3 +1,124 @@
+#'
+#' Assumptions:
+#'   1. Object passed to `loess_fit` had the formula `[var1] ~ [var2]`, e.g. `obs ~ date_time`.
+#'   2. Object passed to `data` includes the `[var1]` col from Assumption #1 with the same name, e.g. `obs`.
+#'
+#' @param data A tsibble. Cannot have multiple elements in key, if key exists.
+#' @param digest Output of `anneal::digest` for smoothed data.
+#' @param resolution The step size (along x-axis) during search. Currently must equally divide 1 (e.g. 1, 0.2, or 0.5).
+#' @param range_start Start of range to search over.
+#' @param range_end End of range to search over.
+#' @param ortho_vec Output of `anneal_calc_ortho_vec` for smoothed data.
+#' @param loess_fit Fitted output of `loess` on your data.
+#' @param loss_fn f(seq, seq) The loss function.
+#' @returns list(
+#'   shifted_data = tibble[
+#'     k         = The fragment (1 = 1 season back, etc.).
+#'     .pred_obs = The fragment's predicted value at `final_idx` for a particular `shift`.
+#'     final_idx = The index as aligned to the original data's indexes.
+#'     shift     = The shift along x-axis, relative you the `digest`'s `adj_idx`.
+#'                 `adj_idx` + `shift` = `final_idx`
+#'     datetime  =  The
+#'   ],
+#'   losses       = tibble[
+#'     shift     = The shift along x-axis, relative you the `digest`'s `adj_idx`.
+#'                 `adj_idx` + `shift` = `final_idx`
+#'     loss      = The loss in the overlapping region of the fragment at `final_idx`
+#'                 and the `data`, as calculated by `loss_fn`.
+#'   ])
+#'
+#' @export
+anneal <- function(data, digest, resolution, range_start, range_end, ortho_vec, loess_fit, loss_fn) {
+  # TODO: digest group by here, or in digest?
+  data = data %>% mutate(idx = row_number())
+  # TODO: drop loss col from digest
+  # TODO: split by k
+  fragment = digest
+  pred_col_name = attr(loess_fit$terms, "term.labels")
+  upsampled_fragment = tibble(
+    idx = seq(min(fragment$idx), max(fragment$idx), resolution),
+    adj_idx = seq(min(fragment$adj_idx), max(fragment$adj_idx), resolution),
+    k = fragment %>% pull(k) %>% first(),
+    .pred_obs = predict(loess_fit, tibble({{ pred_col_name }} := idx))
+  )
+
+  # want to move along x axis by `resolution`,
+  # so `resolution` = some fraction, c, of cos(o_v) == o_v$x
+  # so c * cos = res, so c = res / cos
+  c = resolution / ortho_vec$x  # c * cos(o_v) = resolution
+  dx = resolution
+  # move along y by the same fraction, c
+  dy = c * ortho_vec$y  # dy = how much you shift .pred_obs each dx, i.e. each unit of `resolution`
+
+  df = NULL
+  losses = NULL
+  for (shift in seq(range_start, range_end, resolution)) {
+    # shift
+    shifted_upsampled_fragment = upsampled_fragment %>%
+      mutate(
+        final_idx = adj_idx + shift,
+        .pred_obs = .pred_obs + ((shift / resolution) * dy),
+        shift = shift
+      )
+
+    # Remove non-(near)-integer indexes
+    shifted_upsampled_fragment <- shifted_upsampled_fragment %>%
+      filter(near(final_idx %% 1, 1) | near(final_idx %% 1, 0)) %>%  # `near` in case of, e.g. res = 0.3333
+      mutate(final_idx = round(final_idx))
+
+    # Add date col.
+    # how far beyond the "real" ts does our shifted fragment extend?
+    n_to_append = max(shifted_upsampled_fragment$final_idx) - max(data$idx)
+    # TODO: include this check?
+    # assert_that(n_to_append > 0, msg = "Fragment doesn't extend beyond original series.")
+    # extend our dates that far
+    extended_dates = data %>%
+      select(index(.)) %>%  # ref: https://magrittr.tidyverse.org/reference/pipe.html#using-the-dot-for-secondary-purposes
+      append_row(n = n_to_append) %>%
+      mutate(idx = row_number())  # -> tsibble[date_col]
+    # join
+    shifted_upsampled_fragment <- left_join(
+      shifted_upsampled_fragment,
+      extended_dates,
+      by = join_by(final_idx == idx),
+      relationship = "one-to-one"
+    )  # date col will be whatever the `index` of the input `data` tsibble is.
+
+    # Loss calc
+    overlap = inner_join(
+      data,
+      shifted_upsampled_fragment,
+      by = join_by(idx == final_idx)
+    )  # -> tsibble
+    # TODO: check overlap [min,max]
+    original_obs = overlap %>%
+      as_tibble() %>%
+      ungroup() %>%
+      pull(pred_col_name)  # woof
+    loss = loss_fn(original_obs, overlap$.pred_obs)
+    loss_row = tibble(shift = shift, loss = loss)
+
+    # Write
+    df = bind_rows(df, shifted_upsampled_fragment)
+    losses = bind_rows(losses, loss_row)
+  }
+
+  list(fragments = df, losses = losses)
+}
+
+
+
+#' Calculate the root mean squared error of two sequences.
+#'
+#' @param a Sequence 1
+#' @param b Sequence 2
+#' @returns RMSE
+#'
+#' @export
+rmse <- function(a, b) {
+  sqrt(mean((a - b) ^ 2))
+}
+
 #' Fragment your time series by seasons, with an overlap.
 #'
 #' A "fragment" is 1 or more prior seasons' of data, plus an overlap for annealing.

@@ -1,3 +1,38 @@
+# anneal
+test_that("anneal", {
+  data = tibble(
+    x = 1:8,
+    y = 1:8,
+    datetime = as.Date("2017-01-01") + 0:7
+    ) %>%
+    as_tsibble()
+
+  fit_lm = lm(y ~ x, data = data)
+  # expected = tibble(
+  #   x = c(107:112, 103:112),
+  #   idx = c(7:12, 3:12),
+  #   k = c(rep(1,6), rep(2,10)),
+  #   adj_idx = c(11:16, 11:20)
+  # )
+  expected_losses = tibble(
+    shift = c(-1,0,1),
+    loss = c(3,4,5)
+  )
+  d = digest(data, 2, 4)
+  ortho_vec = tibble(x = 1, y = 0)  # move left-right only
+  out = anneal(
+    data = data,
+    digest = d,
+    resolution = 1,
+    range_start = -1,
+    range_end = 1,
+    ortho_vec = ortho_vec,
+    loess_fit = fit_lm,
+    loss_fn = rmse
+    )
+  expect_equal(out$losses, expected_losses)
+})
+
 # digest
 test_that("digest handles tsibbles", {
   data = tibble(

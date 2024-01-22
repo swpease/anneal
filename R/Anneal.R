@@ -1,3 +1,4 @@
+#' Plot the output of anneal. Tentative.
 #'
 #' @export
 plot_anneal <- function(data, x, y, anneal_output) {

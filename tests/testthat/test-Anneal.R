@@ -3,7 +3,8 @@ test_that("anneal", {
   data = tibble(
     x = 1:8,
     y = 1:8,
-    datetime = as.Date("2017-01-01") + 0:7
+    datetime = as.Date("2017-01-01") + 0:7,
+    # idx_data = 1:8,
     ) %>%
     as_tsibble()
 
@@ -22,6 +23,7 @@ test_that("anneal", {
     )
   )
   expected_losses = tibble(
+    k = c(1,1,1),
     shift = c(-1,0,1),
     loss = c(3,4,5)
   )

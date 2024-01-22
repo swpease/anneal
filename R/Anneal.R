@@ -56,11 +56,23 @@ plot_anneal <- function(data, x, y, anneal_output) {
 #'
 #' @export
 anneal <- function(data, digest, resolution, range_start, range_end, ortho_vec, loess_fit, loss_fn) {
-  # TODO: digest group by here, or in digest?
   data = data %>% mutate(idx_data = row_number())
   # TODO: drop loss col from digest
-  # TODO: split by k
-  fragment = digest
+
+  df = NULL
+  losses = NULL
+  for (k in (digest %>% pull(k) %>% unique())) {
+    fragment = digest %>% filter(k == k)
+    annealed_frag = anneal_fragment(data, fragment, resolution, range_start, range_end, ortho_vec, loess_fit, loss_fn)
+    df = bind_rows(df, annealed_frag$fragments)
+    losses = bind_rows(losses, annealed_frag$losses)
+  }
+
+  list(fragments = df, losses = losses)
+}
+
+
+anneal_fragment = function(data, fragment, resolution, range_start, range_end, ortho_vec, loess_fit, loss_fn) {
   pred_col_name = attr(loess_fit$terms, "term.labels")
   upsampled_fragment = tibble(
     idx_upsam = seq(min(fragment$idx), max(fragment$idx), resolution),
@@ -123,7 +135,11 @@ anneal <- function(data, digest, resolution, range_start, range_end, ortho_vec, 
       ungroup() %>%
       pull(pred_col_name)  # woof
     loss = loss_fn(original_obs, overlap$.pred_obs)
-    loss_row = tibble(shift = shift, loss = loss)
+    loss_row = tibble(
+      k = fragment %>% pull(k) %>% first(),
+      shift = shift,
+      loss = loss
+    )
 
     # Write
     df = bind_rows(df, shifted_upsampled_fragment)
@@ -132,7 +148,6 @@ anneal <- function(data, digest, resolution, range_start, range_end, ortho_vec, 
 
   list(fragments = df, losses = losses)
 }
-
 
 
 #' Calculate the root mean squared error of two sequences.

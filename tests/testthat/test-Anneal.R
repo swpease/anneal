@@ -9,6 +9,9 @@ test_that("anneal", {
     as_tsibble()
 
   fit_lm = lm(y ~ x, data = data)
+  pred_lm = predict(fit_lm, new_data = data$x)
+  data = data %>% mutate(fitted_obs = pred_lm)
+
   expected_fragments = tibble(
     idx_upsam = rep(3:8, 3),
     adj_idx = idx_upsam + 4,
@@ -31,6 +34,7 @@ test_that("anneal", {
   ortho_vec = tibble(x = 1, y = 0)  # move left-right only
   out = anneal(
     data = data,
+    fitted_obs = "fitted_obs",
     digest = d,
     resolution = 1,
     range_start = -1,

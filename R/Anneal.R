@@ -32,6 +32,7 @@ plot_anneal <- function(data, x, y, anneal_output) {
 #'   2. Object passed to `data` includes the `[var1]` col from Assumption #1 with the same name, e.g. `obs`.
 #'
 #' @param data A tsibble. Cannot have multiple elements in key, if key exists.
+#' @param fitted_obs_col_name The column name in `data` of fitted observations from `predict(loess_fit, new_data = <your data idx>)`.
 #' @param digest Output of `anneal::digest` for smoothed data.
 #' @param resolution The step size (along x-axis) during search. Currently must equally divide 1 (e.g. 1, 0.2, or 0.5).
 #' @param range_start Start of range to search over.
@@ -56,7 +57,7 @@ plot_anneal <- function(data, x, y, anneal_output) {
 #'   ])
 #'
 #' @export
-anneal <- function(data, digest, resolution, range_start, range_end, ortho_vec, loess_fit, loss_fn) {
+anneal <- function(data, fitted_obs_col_name, digest, resolution, range_start, range_end, ortho_vec, loess_fit, loss_fn) {
   data = data %>% mutate(idx_data = row_number())
   # TODO: drop loss col from digest
 
@@ -64,7 +65,7 @@ anneal <- function(data, digest, resolution, range_start, range_end, ortho_vec, 
   losses = NULL
   for (k in (digest %>% pull(k) %>% unique())) {
     fragment = digest %>% filter(k == k)
-    annealed_frag = anneal_fragment(data, fragment, resolution, range_start, range_end, ortho_vec, loess_fit, loss_fn)
+    annealed_frag = anneal_fragment(data, fitted_obs_col_name, fragment, resolution, range_start, range_end, ortho_vec, loess_fit, loss_fn)
     df = bind_rows(df, annealed_frag$fragments)
     losses = bind_rows(losses, annealed_frag$losses)
   }
@@ -73,7 +74,7 @@ anneal <- function(data, digest, resolution, range_start, range_end, ortho_vec, 
 }
 
 
-anneal_fragment = function(data, fragment, resolution, range_start, range_end, ortho_vec, loess_fit, loss_fn) {
+anneal_fragment = function(data, fitted_obs_col_name, fragment, resolution, range_start, range_end, ortho_vec, loess_fit, loss_fn) {
   pred_col_name = attr(loess_fit$terms, "term.labels")
   upsampled_fragment = tibble(
     idx_upsam = seq(min(fragment$idx), max(fragment$idx), resolution),
@@ -134,7 +135,7 @@ anneal_fragment = function(data, fragment, resolution, range_start, range_end, o
     original_obs = overlap %>%
       as_tibble() %>%
       ungroup() %>%
-      pull(pred_col_name)  # woof
+      pull(fitted_obs_col_name)  # woof
     loss = loss_fn(original_obs, overlap$.pred_obs)
     loss_row = tibble(
       k = fragment %>% pull(k) %>% first(),

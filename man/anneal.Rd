@@ -10,6 +10,7 @@
 \usage{
 anneal(
   data,
+  fitted_obs_col_name,
   digest,
   resolution,
   range_start,
@@ -21,6 +22,8 @@ anneal(
 }
 \arguments{
 \item{data}{A tsibble. Cannot have multiple elements in key, if key exists.}
+
+\item{fitted_obs_col_name}{The column name in \code{data} of fitted observations from \verb{predict(loess_fit, new_data = <your data idx>)}.}
 
 \item{digest}{Output of \code{anneal::digest} for smoothed data.}
 

@@ -63,8 +63,8 @@ anneal <- function(data, fitted_obs_col_name, digest, resolution, range_start, r
 
   df = NULL
   losses = NULL
-  for (k in (digest %>% pull(k) %>% unique())) {
-    fragment = digest %>% filter(k == k)
+  for (k_idx in (digest %>% pull(k) %>% unique())) {
+    fragment = digest %>% filter(k == k_idx)
     annealed_frag = anneal_fragment(data, fitted_obs_col_name, fragment, resolution, range_start, range_end, ortho_vec, loess_fit, loss_fn)
     df = bind_rows(df, annealed_frag$fragments)
     losses = bind_rows(losses, annealed_frag$losses)

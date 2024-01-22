@@ -1,4 +1,52 @@
 # anneal
+test_that("anneal iterates k's", {
+  data = tibble(
+    x = 1:3,
+    y = 1:3,
+    datetime = as.Date("2017-01-01") + 0:2,
+  ) %>%
+    as_tsibble()
+
+  fit_lm = lm(y ~ x, data = data)
+  pred_lm = predict(fit_lm, new_data = data$x)
+  data = data %>% mutate(fitted_obs = pred_lm)
+  d = digest(data, 1, 1)
+  ortho_vec = tibble(x = 1, y = 0)  # move left-right only
+
+  out = anneal(
+    data = data,
+    fitted_obs = "fitted_obs",
+    digest = d,
+    resolution = 1,
+    range_start = 0,
+    range_end = 0,
+    ortho_vec = ortho_vec,
+    loess_fit = fit_lm,
+    loss_fn = rmse
+  )
+
+  expected_fragments = tibble(
+    idx_upsam = c(c(2,3),c(1,2,3)),
+    adj_idx = c(c(3,4),c(3,4,5)),
+    k = c(c(1,1),c(2,2,2)),
+    .pred_obs = setNames(idx_upsam, c(c(1,2),c(1,2,3))),  # ref: https://adv-r.hadley.nz/vectors-chap.html#attr-names
+    final_idx = adj_idx,
+    shift = 0,
+    datetime = c(
+      as.Date("2017-01-03") + 0:1,
+      as.Date("2017-01-03") + 0:2
+    )
+  )
+  expected_losses = tibble(
+    k = c(1,2),
+    shift = c(0,0),
+    loss = c(1,2)
+  )
+
+  expect_equal(out$losses, expected_losses)
+  expect_equal(out$fragments, expected_fragments)
+})
+
 test_that("anneal", {
   data = tibble(
     x = 1:8,
@@ -11,6 +59,8 @@ test_that("anneal", {
   fit_lm = lm(y ~ x, data = data)
   pred_lm = predict(fit_lm, new_data = data$x)
   data = data %>% mutate(fitted_obs = pred_lm)
+  d = digest(data, 2, 4)
+  ortho_vec = tibble(x = 1, y = 0)  # move left-right only
 
   expected_fragments = tibble(
     idx_upsam = rep(3:8, 3),
@@ -30,8 +80,7 @@ test_that("anneal", {
     shift = c(-1,0,1),
     loss = c(3,4,5)
   )
-  d = digest(data, 2, 4)
-  ortho_vec = tibble(x = 1, y = 0)  # move left-right only
+
   out = anneal(
     data = data,
     fitted_obs = "fitted_obs",

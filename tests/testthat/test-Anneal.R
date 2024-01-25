@@ -200,3 +200,10 @@ test_that("y=(1/2)x w/ scaler = 2 ts's ortho vec points at y=(-x)", {
   out = calc_ortho_vec(data$x, 2, scaler = 2)
   expect_equal(out, expected)
 })
+
+
+test_that("weighed rmse", {
+  a = c(1,1,1,5,2)
+  b = c(1,3,3,3,3)
+  expect_equal(weighted_rmse(a, b), 2)
+})

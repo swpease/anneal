@@ -163,6 +163,37 @@ rmse <- function(a, b) {
   sqrt(mean((a - b) ^ 2))
 }
 
+
+#' Calculate the weighted root mean squared error of two sequences.
+#'
+#' Weights are based on sequence `b`'s `difference`. At time t,
+#' the formulation is: ((a_t - b_t) * (b_t - b_{t-1})) ^ 2.
+#'
+#' Intended to be passed as the `loss_fn` arg of `anneal`.
+#'
+#' In the context of this package, `b` makes more sense as your fragment,
+#' because the "current" data, `a`, may have a misleading trajectory for
+#' its smoothed fit (e.g. an imminent upturn / other inflection point
+#' isn't reflected because it hasn't happened yet.).
+#'
+#' This weighting means that the flat parts / inflection points of
+#' the series have minimal influence. Ergo, the sequences' alignment
+#' should be driven by the spring/fall temperature changes, not the
+#' extremeness of summer/winter. It is a compromise for the failure
+#' of the method relying on calculating an orthogonal vector.
+#'
+#' @param a Sequence 1
+#' @param b Sequence 2
+#' @returns Weighted RMSE
+#'
+#' @export
+weighted_rmse <- function(a, b) {
+  b_diff = difference(b)
+
+  sqrt(mean(((a - b) * b_diff) ^ 2, na.rm = TRUE))
+}
+
+
 #' Fragment your time series by seasons, with an overlap.
 #'
 #' A "fragment" is 1 or more prior seasons' of data, plus an overlap for annealing.

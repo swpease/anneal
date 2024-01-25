@@ -38,7 +38,7 @@ plot_anneal <- function(data, x, y, anneal_output) {
 #' @param range_start Start of range to search over.
 #' @param range_end End of range to search over.
 #' @param loess_fit Fitted output of `loess` on your data.
-#' @param loss_fn f(seq, seq) The loss function.
+#' @param loss_fn f(original, fragment) The loss function.
 #' @returns list(
 #'   shifted_data = tibble[
 #'     k         = The fragment (1 = 1 season back, etc.).

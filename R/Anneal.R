@@ -37,7 +37,6 @@ plot_anneal <- function(data, x, y, anneal_output) {
 #' @param resolution The step size (along x-axis) during search. Currently must equally divide 1 (e.g. 1, 0.2, or 0.5).
 #' @param range_start Start of range to search over.
 #' @param range_end End of range to search over.
-#' @param ortho_vec Output of `anneal_calc_ortho_vec` for smoothed data.
 #' @param loess_fit Fitted output of `loess` on your data.
 #' @param loss_fn f(seq, seq) The loss function.
 #' @returns list(
@@ -57,7 +56,7 @@ plot_anneal <- function(data, x, y, anneal_output) {
 #'   ])
 #'
 #' @export
-anneal <- function(data, fitted_obs_col_name, digest, resolution, range_start, range_end, ortho_vec, loess_fit, loss_fn) {
+anneal <- function(data, fitted_obs_col_name, digest, resolution, range_start, range_end, loess_fit, loss_fn) {
   data = data %>% mutate(idx_data = row_number())
   # TODO: drop loss col from digest
 
@@ -65,7 +64,7 @@ anneal <- function(data, fitted_obs_col_name, digest, resolution, range_start, r
   losses = NULL
   for (k_idx in (digest %>% pull(k) %>% unique())) {
     fragment = digest %>% filter(k == k_idx)
-    annealed_frag = anneal_fragment(data, fitted_obs_col_name, fragment, resolution, range_start, range_end, ortho_vec, loess_fit, loss_fn)
+    annealed_frag = anneal_fragment(data, fitted_obs_col_name, fragment, resolution, range_start, range_end, loess_fit, loss_fn)
     df = bind_rows(df, annealed_frag$fragments)
     losses = bind_rows(losses, annealed_frag$losses)
   }
@@ -74,7 +73,7 @@ anneal <- function(data, fitted_obs_col_name, digest, resolution, range_start, r
 }
 
 
-anneal_fragment = function(data, fitted_obs_col_name, fragment, resolution, range_start, range_end, ortho_vec, loess_fit, loss_fn) {
+anneal_fragment = function(data, fitted_obs_col_name, fragment, resolution, range_start, range_end, loess_fit, loss_fn) {
   pred_col_name = attr(loess_fit$terms, "term.labels")
   upsampled_fragment = tibble(
     idx_upsam = seq(min(fragment$idx), max(fragment$idx), resolution),
@@ -83,14 +82,6 @@ anneal_fragment = function(data, fitted_obs_col_name, fragment, resolution, rang
     .pred_obs = predict(loess_fit, tibble({{ pred_col_name }} := idx_upsam))
   )
 
-  # want to move along x axis by `resolution`,
-  # so `resolution` = some fraction, c, of cos(o_v) == o_v$x
-  # so c * cos = res, so c = res / cos
-  c = resolution / ortho_vec$x  # c * cos(o_v) = resolution
-  dx = resolution
-  # move along y by the same fraction, c
-  dy = c * ortho_vec$y  # dy = how much you shift .pred_obs each dx, i.e. each unit of `resolution`
-
   df = NULL
   losses = NULL
   for (shift in seq(range_start, range_end, resolution)) {
@@ -98,7 +89,6 @@ anneal_fragment = function(data, fitted_obs_col_name, fragment, resolution, rang
     shifted_upsampled_fragment = upsampled_fragment %>%
       mutate(
         final_idx = adj_idx + shift,
-        .pred_obs = .pred_obs + ((shift / resolution) * dy),
         shift = shift
       )
 

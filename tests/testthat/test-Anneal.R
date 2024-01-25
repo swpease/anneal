@@ -11,7 +11,6 @@ test_that("anneal iterates k's", {
   pred_lm = predict(fit_lm, new_data = data$x)
   data = data %>% mutate(fitted_obs = pred_lm)
   d = digest(data, 1, 1)
-  ortho_vec = tibble(x = 1, y = 0)  # move left-right only
 
   out = anneal(
     data = data,
@@ -20,7 +19,6 @@ test_that("anneal iterates k's", {
     resolution = 1,
     range_start = 0,
     range_end = 0,
-    ortho_vec = ortho_vec,
     loess_fit = fit_lm,
     loss_fn = rmse
   )
@@ -60,7 +58,6 @@ test_that("anneal", {
   pred_lm = predict(fit_lm, new_data = data$x)
   data = data %>% mutate(fitted_obs = pred_lm)
   d = digest(data, 2, 4)
-  ortho_vec = tibble(x = 1, y = 0)  # move left-right only
 
   expected_fragments = tibble(
     idx_upsam = rep(3:8, 3),
@@ -88,7 +85,6 @@ test_that("anneal", {
     resolution = 1,
     range_start = -1,
     range_end = 1,
-    ortho_vec = ortho_vec,
     loess_fit = fit_lm,
     loss_fn = rmse
     )

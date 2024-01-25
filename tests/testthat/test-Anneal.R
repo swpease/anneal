@@ -96,6 +96,7 @@ test_that("anneal", {
   expect_equal(out$fragments, expected_fragments)
 })
 
+
 # digest
 test_that("digest handles tsibbles", {
   data = tibble(
@@ -146,7 +147,20 @@ test_that("digest, partial overlaps excluded", {
     k = c(rep(1,9)),
     adj_idx = c(8:16)
   )
-  out = digest(data, 5, 4, FALSE)
+  out = digest(data, 5, 4, include_partial_overlap = FALSE)
+  expect_equal(out, expected)
+})
+
+
+test_that("digest, n_future_steps limits fragment size", {
+  data = tibble(x = 101:112)
+  expected = tibble(
+    x = c(104:111, 101:107),
+    idx = c(4:11, 1:7),
+    k = c(rep(1,8), rep(2,7)),
+    adj_idx = c(8:15, 9:15)
+  )
+  out = digest(data, 5, 4, n_future_steps = 3)
   expect_equal(out, expected)
 })
 

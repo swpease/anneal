@@ -171,6 +171,7 @@ rmse <- function(a, b) {
 #' @param data The data.
 #' @param n_overlap The number of time points to overlap. Must be positive integer.
 #' @param season_len The number of time points per season. Must be positive integer.
+#' @param n_future_steps The number of time points for fragments to extend beyond your latest observation.
 #' @param include_partial_overlap Whether to include the final fragment if there is only partial overlap.
 #' @returns A tibble of fragments containing cols:
 #'   idx:     The index w.r.t the original data.
@@ -178,9 +179,10 @@ rmse <- function(a, b) {
 #'   adj_idx: The fragment, aligned to the latest data.
 #'
 #' @export
-digest <- function(data, n_overlap, season_len, include_partial_overlap = TRUE) {
+digest <- function(data, n_overlap, season_len, n_future_steps = 120, include_partial_overlap = TRUE) {
   assert_that(n_overlap > 0, msg = "Need n_overlap > 0.")
   assert_that(season_len > 0, msg = "Need season_len > 0.")
+  assert_that(n_future_steps > 0, msg = "Need n_future_steps > 0.")
 
   data = data %>%
     as_tibble() %>%
@@ -216,6 +218,7 @@ digest <- function(data, n_overlap, season_len, include_partial_overlap = TRUE) 
     df = bind_rows(df, fragment)
     k = k + 1
   }
+  df = df %>% filter(adj_idx <= t_max + n_future_steps)
 
   df
 }

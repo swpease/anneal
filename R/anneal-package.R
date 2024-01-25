@@ -10,5 +10,6 @@
 #' @import tsibble
 
 ## usethis namespace: start
+#' @importFrom purrr detect_index
 ## usethis namespace: end
 NULL

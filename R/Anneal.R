@@ -245,6 +245,44 @@ digest <- function(data, n_overlap, season_len, n_future_steps = 120, include_pa
 }
 
 
+#' Trim digest fragments of leading/trailing NAs
+#'
+#' This is useful for cases where one/both ends of your fragments contain
+#' NA's that you don't want to have `predict`ed with
+#' your `loess_fit` in `anneal`, such as a large gap beyond the end(s) of the
+#' fragment until the next non-NA observation (i.e. you don't trust the fit
+#' for these NA's).
+#'
+#' @param digest Output of `digest`.
+#' @param .col The column to search through for NAs.
+#' @param left Trim left side?
+#' @param right Trim right side?
+#' @returns digest with trimmed fragments.
+#'
+#' @export
+trim_fragments_na <- function(digest, .col, left = TRUE, right = TRUE) {
+  if (left) {
+    digest = digest %>% slice(
+      detect_index(
+        {{ .col }},
+        \(x) !is.na(x)
+      ):n(),
+      .by = k)
+  }
+  if (right) {
+    digest = digest %>% slice(
+      1:detect_index(
+        {{ .col }},
+        \(x) !is.na(x),
+        .dir = "backward"
+      ),
+      .by = k)
+  }
+
+  digest
+}
+
+
 #' Calculate a vector orthogonal to the normalized average difference of your time series.
 #'
 #' The steps are:

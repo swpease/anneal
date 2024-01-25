@@ -4,7 +4,13 @@
 \alias{digest}
 \title{Fragment your time series by seasons, with an overlap.}
 \usage{
-digest(data, n_overlap, season_len, include_partial_overlap = TRUE)
+digest(
+  data,
+  n_overlap,
+  season_len,
+  n_future_steps = 120,
+  include_partial_overlap = TRUE
+)
 }
 \arguments{
 \item{data}{The data.}
@@ -12,6 +18,8 @@ digest(data, n_overlap, season_len, include_partial_overlap = TRUE)
 \item{n_overlap}{The number of time points to overlap. Must be positive integer.}
 
 \item{season_len}{The number of time points per season. Must be positive integer.}
+
+\item{n_future_steps}{The number of time points for fragments to extend beyond your latest observation.}
 
 \item{include_partial_overlap}{Whether to include the final fragment if there is only partial overlap.}
 }

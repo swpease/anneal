@@ -160,6 +160,30 @@ test_that("digest, n_future_steps limits fragment size", {
   expect_equal(out, expected)
 })
 
+test_that("fragment trimming", {
+  data = tibble(
+    x = c(NA,NA,2,2,NA,NA,1,4,NA),
+    k = c(1,1,1,1,1,2,2,2,2)
+  )
+  expected_default = tibble(
+    x = c(2,2,1,4),
+    k = c(1,1,2,2)
+  )
+  expected_left_only = tibble(
+    x = c(2,2,NA,1,4,NA),
+    k = c(1,1,1,2,2,2)
+  )
+  expected_right_only = tibble(
+    x = c(NA,NA,2,2,NA,1,4),
+    k = c(1,1,1,1,2,2,2)
+  )
+  expected_neither = data
+
+  expect_equal(data %>% trim_fragments_na(x), expected_default)
+  expect_equal(data %>% trim_fragments_na(x, right = FALSE), expected_left_only)
+  expect_equal(data %>% trim_fragments_na(x, left = FALSE), expected_right_only)
+  expect_equal(data %>% trim_fragments_na(x, left = FALSE, right = FALSE), expected_neither)
+})
 
 # calc_ortho_vec
 test_that("flat ts's ortho vec points up", {

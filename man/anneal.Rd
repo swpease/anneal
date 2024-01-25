@@ -15,7 +15,6 @@ anneal(
   resolution,
   range_start,
   range_end,
-  ortho_vec,
   loess_fit,
   loss_fn
 )
@@ -33,11 +32,9 @@ anneal(
 
 \item{range_end}{End of range to search over.}
 
-\item{ortho_vec}{Output of \code{anneal_calc_ortho_vec} for smoothed data.}
-
 \item{loess_fit}{Fitted output of \code{loess} on your data.}
 
-\item{loss_fn}{f(seq, seq) The loss function.}
+\item{loss_fn}{f(original, fragment) The loss function.}
 }
 \value{
 list(

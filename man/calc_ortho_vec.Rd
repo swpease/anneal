@@ -4,12 +4,14 @@
 \alias{calc_ortho_vec}
 \title{Calculate a vector orthogonal to the normalized average difference of your time series.}
 \usage{
-calc_ortho_vec(ts, n, wts = NULL)
+calc_ortho_vec(ts, n, scaler = 1, wts = NULL)
 }
 \arguments{
 \item{ts}{The time series. Should be smooth/smoothed. e.g. dat$readings}
 
 \item{n}{The number of values at the end of the value column to include. Constraint: 1 < n < len(value)}
+
+\item{scaler}{Scale your y's so that they're on equal footing w/ dx.}
 
 \item{wts}{Optional weights for each difference.}
 }

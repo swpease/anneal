@@ -179,3 +179,10 @@ test_that("weighting ortho vec works", {
   out = calc_ortho_vec(data$x, 2, wts = c(1,1,2))
   expect_equal(out, expected)
 })
+
+test_that("y=(1/2)x w/ scaler = 2 ts's ortho vec points at y=(-x)", {
+  data = tibble(x = c(0,0.5,1))
+  expected = tibble(x = cos(3/4*pi), y = sin(3/4*pi))
+  out = calc_ortho_vec(data$x, 2, scaler = 2)
+  expect_equal(out, expected)
+})

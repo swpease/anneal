@@ -234,12 +234,13 @@ digest <- function(data, n_overlap, season_len, include_partial_overlap = TRUE) 
 #'
 #' @param ts The time series. Should be smooth/smoothed. e.g. dat$readings
 #' @param n The number of values at the end of the value column to include. Constraint: 1 < n < len(value)
+#' @param scaler Scale your y's so that they're on equal footing w/ dx.
 #' @param wts Optional weights for each difference.
 #'
 #' @returns tibble (1x2) Normalized orthogonal vector.
 #'
 #' @export
-calc_ortho_vec <- function(ts, n, wts = NULL) {
+calc_ortho_vec <- function(ts, n, scaler = 1, wts = NULL) {
   assert_that(n > 1, msg = "Need n > 1.")
   validate_that(n < length(ts), msg = "n >= len(value); will yield NAs for diff calc.")
   if (!(is.null(wts))) {
@@ -248,7 +249,8 @@ calc_ortho_vec <- function(ts, n, wts = NULL) {
   wts = ifelse(is.null(wts), 1, wts)
 
   diffs = ts %>% difference() %>% as_tibble() %>% slice_tail(n = n)
-  rotated_vecs = tibble(x = -diffs, y = 1)  # 90deg counter-clock rot.
+  scaled_diffs = diffs * scaler
+  rotated_vecs = tibble(x = -scaled_diffs, y = 1)  # 90deg counter-clock rot.
   normed_rotated_vecs = rotated_vecs %>%  # TODO: extract
     mutate(
       vec_size = sqrt(x^2 + y^2),

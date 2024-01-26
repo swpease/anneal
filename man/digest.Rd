@@ -33,3 +33,8 @@ adj_idx: The fragment, aligned to the latest data.
 A "fragment" is 1 or more prior seasons' of data, plus an overlap for annealing.
 This function is of the same ilk as \code{stretch_tsibble} from the \code{tsibble} package.
 }
+\details{
+Note that potentially "empty" fragments may be returned (e.g. no data
+collected for a given year). To remove these, you can pass the output to
+\code{trim_fragments_na}.
+}

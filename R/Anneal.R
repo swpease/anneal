@@ -189,6 +189,10 @@ weighted_rmse <- function(a, b) {
 #' A "fragment" is 1 or more prior seasons' of data, plus an overlap for annealing.
 #' This function is of the same ilk as `stretch_tsibble` from the `tsibble` package.
 #'
+#' Note that potentially "empty" fragments may be returned (e.g. no data
+#' collected for a given year). To remove these, you can pass the output to
+#' `trim_fragments_na`.
+#'
 #' @param data The data.
 #' @param n_overlap The number of time points to overlap. Must be positive integer.
 #' @param season_len The number of time points per season. Must be positive integer.
@@ -253,6 +257,10 @@ digest <- function(data, n_overlap, season_len, n_future_steps = 120, include_pa
 #' fragment until the next non-NA observation (i.e. you don't trust the fit
 #' for these NA's).
 #'
+#' This function always removes fragments containing only NA observations.
+#' As such, setting both `left` and `right` to `FALSE` will remove
+#' only these all-NA fragments.
+#'
 #' @param digest Output of `digest`.
 #' @param .col The column to search through for NAs.
 #' @param left Trim left side?
@@ -261,6 +269,12 @@ digest <- function(data, n_overlap, season_len, n_future_steps = 120, include_pa
 #'
 #' @export
 trim_fragments_na <- function(digest, .col, left = TRUE, right = TRUE) {
+  # Remove fragments w/o any non-NA observations.
+  digest = digest %>%
+    group_by(k) %>%
+    filter(!all(is.na({{ .col }}))) %>%
+    ungroup()
+
   if (left) {
     digest = digest %>% slice(
       detect_index(

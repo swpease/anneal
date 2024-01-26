@@ -185,6 +185,24 @@ test_that("fragment trimming", {
   expect_equal(data %>% trim_fragments_na(x, left = FALSE, right = FALSE), expected_neither)
 })
 
+test_that("fragment trimming removes empty fragments", {
+  data = tibble(
+    x = c(NA,NA,2,2,NA,NA,NA,NA,1,4,NA),
+    k = c(1,1,1,1,1,2,2,3,3,3,3)
+  )
+  expected = tibble(
+    x = c(2,2,1,4),
+    k = c(1,1,3,3)
+  )
+  expected_neither = tibble(
+    x = c(NA,NA,2,2,NA,NA,1,4,NA),
+    k = c(1,1,1,1,1,3,3,3,3)
+  )
+
+  expect_equal(data %>% trim_fragments_na(x), expected)
+  expect_equal(data %>% trim_fragments_na(x, left = FALSE, right = FALSE), expected_neither)
+})
+
 # calc_ortho_vec
 test_that("flat ts's ortho vec points up", {
   data = tibble(x = c(0,0,0,0,0))

@@ -25,3 +25,8 @@ your \code{loess_fit} in \code{anneal}, such as a large gap beyond the end(s) of
 fragment until the next non-NA observation (i.e. you don't trust the fit
 for these NA's).
 }
+\details{
+This function always removes fragments containing only NA observations.
+As such, setting both \code{left} and \code{right} to \code{FALSE} will remove
+only these all-NA fragments.
+}

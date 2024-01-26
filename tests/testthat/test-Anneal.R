@@ -240,8 +240,16 @@ test_that("y=(1/2)x w/ scaler = 2 ts's ortho vec points at y=(-x)", {
 })
 
 
-test_that("weighed rmse", {
+test_that("slope-weighed rmse", {
   a = c(1,1,1,5,2)
   b = c(1,3,3,3,3)
-  expect_equal(weighted_rmse(a, b), 2)
+  expect_equal(slope_weighted_rmse(a, b), 2)
+})
+
+
+test_that("recency-weighed rmse", {
+  a = c(1,1,1)
+  b = c(1,5,3)
+  # so weights should be c(0,0.5,1)
+  expect_equal(recency_weighted_rmse(a, b), 2)
 })

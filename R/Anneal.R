@@ -1,3 +1,17 @@
+#' Plot the losses output of anneal.
+#'
+#' @param anneal_out Output of `anneal`.
+#'
+#' @export
+plot_anneal_losses <- function(anneal_out) {
+  # TODO: loss fn attr?
+  anneal_out$losses %>%
+    mutate(k = as.factor(k)) %>%
+    ggplot() +
+    geom_point(aes(shift, loss, color = k))
+}
+
+
 #' Plot the output of anneal. Tentative.
 #'
 #' @export

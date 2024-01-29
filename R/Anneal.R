@@ -1,3 +1,91 @@
+#' Plot an annealed fragment against the smoothed data.
+#'
+#' This plot provides a way to assess how good the annealed fragment fits
+#' the data.
+#'
+#' Truncating is useful for excluding the parts of fragments that extend beyond
+#' your most recent observation, and therefore do not factor into the
+#' loss function.
+#'
+#' @param data .
+#' @param x The datetime column.
+#' @param y The column of smoothed (fitted) observations.
+#' @param anneal_output Output of `anneal`.
+#' @param k Which fragment number to plot.
+#' @param truncate Truncate the plot to `data`'s most recent observation?
+#'
+#' @export
+plot_anneal_fragment <- function(data, x, y, anneal_output, k = 1, truncate = TRUE) {
+  # Filter to particular k
+  k_val = k  # prevent shadowing
+  anneal_output$fragments = anneal_output$fragments %>% filter(k == k_val)
+  anneal_output$losses = anneal_output$losses %>% filter(k == k_val)
+
+  if (truncate) {
+    anneal_output$fragments = anneal_output$fragments %>%
+      filter(
+        datetime < (data %>% pull({{ x }}) %>% max())
+      )
+  }
+
+  original = anneal_output$fragments %>%
+    filter(shift == 0)
+  min_losses = anneal_output$losses %>%
+    filter(loss == min(loss)) %>%
+    pull(shift)
+  best = anneal_output$fragments %>%
+    filter(shift %in% min_losses)
+
+  ggplot() +
+    geom_line(
+      data = anneal_output$fragments,
+      mapping = aes(
+        x = datetime,
+        y = .pred_obs,
+        group = shift,
+        color = "Others",
+      ),
+      alpha = 0.1
+    ) +
+    geom_line(
+      data = original,
+      mapping = aes(
+        x = datetime,
+        y = .pred_obs,
+        group = shift,
+        color = "Original"
+      ),
+    ) +
+    geom_line(
+      data = best,
+      mapping = aes(
+        x = datetime,
+        y = .pred_obs,
+        group = shift,
+        color = "Min Loss"
+      ),
+    ) +
+    geom_line(
+      data = data,
+      mapping = aes(
+        x = {{ x }},
+        y = {{ y }}
+      )
+    ) +
+    ggtitle(sprintf("Optimal shift: %s", min_losses)) +
+    xlab("Datetime") +
+    ylab("Predicted Observation") +
+    scale_color_manual(
+      name = "Fragment",
+      values = c(
+        "Original" = "red",
+        "Min Loss" = "green",
+        "Others" = "blue"
+      )
+    )
+}
+
+
 #' Plot the losses output of anneal.
 #'
 #' @param anneal_out Output of `anneal`.

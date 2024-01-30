@@ -1,3 +1,112 @@
+#' Plot the min-loss shifted fragments against the original data.
+#'
+#' Useful for seeing what a forecast would look like,
+#' and comparing this to using the naive seasonal via
+#' `plot_original_fragments`.
+#'
+#' Setting t_max at, e.g. `lubridate::today() + 30`, is useful for
+#' visual comparisons with `plot_min_loss_fragments` (with the same
+#' t_max).
+#'
+#' @param data The data.
+#' @param x The datetime column.
+#' @param y The (possibly smoothed) observations.
+#' @param anneal_output Output of `anneal`.
+#' @param t_max The upper xlim.
+#'
+#' @export
+plot_min_loss_fragments <- function(data, x, y, anneal_output, t_max = NULL) {
+  if (is.null(t_max)) {
+    t_max = anneal_output$fragments %>%
+      pull(datetime) %>%
+      max()
+  }
+
+  min_losses = anneal_output$losses %>%
+    group_by(k) %>%
+    filter(loss == min(loss, na.rm = TRUE)) %>%
+    select(-loss)
+  min_loss_fragments = right_join(
+    out$fragments,
+    min_losses,
+    by = join_by(k, shift)
+  )
+  min_loss_fragments = min_loss_fragments %>%
+    mutate(k = as.factor(k))
+
+  ggplot() +
+    geom_line(
+      data = min_loss_fragments,
+      mapping = aes(
+        x = datetime,
+        y = .pred_obs,
+        color = k,
+      )
+    ) +
+    geom_line(
+      data = data,
+      mapping = aes(
+        x = {{ x }},
+        y = {{ y }}
+      )
+    ) +
+    scale_x_date(limits = as.Date(c(NA, t_max))) +
+    xlab("Datetime") +
+    ylab("Predicted Observation") +
+    ggtitle("Fragments Shifted to Minimum Loss")
+}
+
+#' Plot the unshifted fragments against the original data.
+#'
+#' Useful for seeing what a naive seasonal forecast would look like,
+#' and comparing this to what `anneal` gives you via
+#' `plot_min_loss_fragments`.
+#'
+#' Setting t_max at, e.g. `lubridate::today() + 30`, is useful for
+#' visual comparisons with `plot_min_loss_fragments` (with the same
+#' t_max).
+#'
+#' @param data The data.
+#' @param x The datetime column.
+#' @param y The (possibly smoothed) observations.
+#' @param anneal_output Output of `anneal`.
+#' @param t_max The upper xlim.
+#'
+#' @export
+plot_original_fragments <- function(data, x, y, anneal_output, t_max = NULL) {
+  if (is.null(t_max)) {
+    t_max = anneal_output$fragments %>%
+      pull(datetime) %>%
+      max()
+  }
+
+  original_fragments = anneal_output$fragments %>%
+    filter(shift == 0) %>%
+    mutate(k = as.factor(k))
+
+  ggplot() +
+    geom_line(
+      data = original_fragments,
+      mapping = aes(
+        x = datetime,
+        y = .pred_obs,
+        color = k,
+      )
+    ) +
+    geom_line(
+      data = data,
+      mapping = aes(
+        x = {{ x }},
+        y = {{ y }}
+      )
+    ) +
+    scale_x_date(limits = as.Date(c(NA, t_max))) +
+    xlab("Datetime") +
+    ylab("Predicted Observation") +
+    ggtitle("Un-shifted Fragments")
+}
+
+
 #' Plot an annealed fragment against the smoothed data.
 #'
 #' This plot provides a way to assess how good the annealed fragment fits

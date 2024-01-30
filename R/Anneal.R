@@ -209,34 +209,6 @@ plot_anneal_losses <- function(anneal_out) {
 }
 
 
-#' Plot the output of anneal. Tentative.
-#'
-#' @export
-plot_anneal <- function(data, x, y, anneal_output) {
-  # anneal_output$losses %>%
-  #   ggplot() +
-  #   geom_point(aes(shift, loss))
-
-  ggplot() +
-    geom_line(
-      data = anneal_output$fragments,
-      mapping = aes(
-        x = final_idx,
-        y = .pred_obs,
-        group = shift
-      ),
-      color = "blue"
-    ) +
-    geom_line(
-      data = data,
-      mapping = aes(
-        x = {{ x }},
-        y = {{ y }}
-      )
-    )
-}
-
-
 #'
 #' Assumptions:
 #'   1. Object passed to `loess_fit` had the formula `[var1] ~ [var2]`, e.g. `obs ~ date_time`.

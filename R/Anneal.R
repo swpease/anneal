@@ -201,9 +201,23 @@ anneal_fragment = function(data, fitted_obs_col_name, fragment, resolution, rang
 
     # Add date col.
     # how far beyond the "real" ts does our shifted fragment extend?
-    n_to_append = max(shifted_upsampled_fragment$final_idx) - max(data$idx_data)
-    # TODO: include this check?
-    # assert_that(n_to_append > 0, msg = "Fragment doesn't extend beyond original series.")
+    n_to_append = max(
+      0,
+      max(shifted_upsampled_fragment$final_idx) - max(data$idx_data)
+    )  # If lt 0, (a) it'll mess things up, and (b) you can't forecast anyway.
+    if (n_to_append == 0) {
+      frag_k = fragment %>% pull(k) %>% first()
+      warning(
+        paste(
+        "Fragment k =", frag_k,
+        "with shift =", shift,
+        "doesn't extend beyond original series.\n",
+        "You may want to remove this fragment from the digest output,\n",
+        "or remove this shift from this anneal output."
+        ),
+        call. = FALSE
+      )
+    }
     # extend our dates that far
     extended_dates = data %>%
       select(index(.)) %>%  # ref: https://magrittr.tidyverse.org/reference/pipe.html#using-the-dot-for-secondary-purposes

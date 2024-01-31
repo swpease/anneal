@@ -6,20 +6,26 @@
 \usage{
 digest(
   data,
+  .observation,
   n_overlap,
   season_len,
   n_future_steps = 120,
+  max_na_sequence = Inf,
   include_partial_overlap = TRUE
 )
 }
 \arguments{
-\item{data}{The data.}
+\item{data}{The data. Must not contain gaps.}
+
+\item{.observation}{Your observations column.}
 
 \item{n_overlap}{The number of time points to overlap. Must be positive integer.}
 
 \item{season_len}{The number of time points per season. Must be positive integer.}
 
 \item{n_future_steps}{The number of time points for fragments to extend beyond your latest observation.}
+
+\item{max_na_sequence}{The largest series of NAs (i.e. gap between observations) before filtering out.}
 
 \item{include_partial_overlap}{Whether to include the final fragment if there is only partial overlap.}
 }
@@ -30,11 +36,27 @@ k:       The fragment (1 = 1 season back, etc.).
 adj_idx: The fragment, aligned to the latest data.
 }
 \description{
-A "fragment" is 1 or more prior seasons' of data, plus an overlap for annealing.
+A "fragment" is 1 or more prior seasons' of data. From a baseline
+of k seasons before your latest observation:
+\enumerate{
+\item It includes a "future" portion of \code{n_future_steps} observations,
+for forecasting purposes.
+\item It also includes a "past" portion of \code{n_overlap} observations,
+for annealing purposes.
 This function is of the same ilk as \code{stretch_tsibble} from the \code{tsibble} package.
 }
+}
 \details{
+The data cannot contain gaps, because this function relies on indexing.
+You can be sure that it doesn't by making it a \code{tsibble} and checking
+for gaps.
+
+\code{max_na_sequence} is used to remove long sequences of missing data.
+Because \code{predict} can predict anywhere (i.e. the observation can be NA),
+this prevents them from being \code{predict}ed in \code{anneal} and thereby
+prevents them from factoring into \code{anneal}'s loss calculation.
+
 Note that potentially "empty" fragments may be returned (e.g. no data
 collected for a given year). To remove these, you can pass the output to
-\code{trim_fragments_na}.
+\code{trim_fragments_na}, or set the \code{max_gap} argument.
 }

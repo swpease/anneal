@@ -129,17 +129,33 @@ anneal_fragment = function(data, fitted_obs_col_name, fragment, resolution, rang
 
 #' Fragment your time series by seasons, with an overlap.
 #'
-#' A "fragment" is 1 or more prior seasons' of data, plus an overlap for annealing.
+#' A "fragment" is 1 or more prior seasons' of data. From a baseline
+#' of k seasons before your latest observation:
+#' 1. It includes a "future" portion of `n_future_steps` observations,
+#' for forecasting purposes.
+#' 2. It also includes a "past" portion of `n_overlap` observations,
+#' for annealing purposes.
 #' This function is of the same ilk as `stretch_tsibble` from the `tsibble` package.
+#'
+#' The data cannot contain gaps, because this function relies on indexing.
+#' You can be sure that it doesn't by making it a `tsibble` and checking
+#' for gaps.
+#'
+#' `max_na_sequence` is used to remove long sequences of missing data.
+#' Because `predict` can predict anywhere (i.e. the observation can be NA),
+#' this prevents them from being `predict`ed in `anneal` and thereby
+#' prevents them from factoring into `anneal`'s loss calculation.
 #'
 #' Note that potentially "empty" fragments may be returned (e.g. no data
 #' collected for a given year). To remove these, you can pass the output to
-#' `trim_fragments_na`.
+#' `trim_fragments_na`, or set the `max_gap` argument.
 #'
-#' @param data The data.
+#' @param data The data. Must not contain gaps.
+#' @param .observation Your observations column.
 #' @param n_overlap The number of time points to overlap. Must be positive integer.
 #' @param season_len The number of time points per season. Must be positive integer.
 #' @param n_future_steps The number of time points for fragments to extend beyond your latest observation.
+#' @param max_na_sequence The largest series of NAs (i.e. gap between observations) before filtering out.
 #' @param include_partial_overlap Whether to include the final fragment if there is only partial overlap.
 #' @returns A tibble of fragments containing cols:
 #'   idx:     The index w.r.t the original data.
@@ -147,7 +163,13 @@ anneal_fragment = function(data, fitted_obs_col_name, fragment, resolution, rang
 #'   adj_idx: The fragment, aligned to the latest data.
 #'
 #' @export
-digest <- function(data, n_overlap, season_len, n_future_steps = 120, include_partial_overlap = TRUE) {
+digest <- function(data,
+                   .observation,
+                   n_overlap,
+                   season_len,
+                   n_future_steps = 120,
+                   max_na_sequence = Inf,
+                   include_partial_overlap = TRUE) {
   assert_that(n_overlap > 0, msg = "Need n_overlap > 0.")
   assert_that(season_len > 0, msg = "Need season_len > 0.")
   assert_that(n_future_steps > 0, msg = "Need n_future_steps > 0.")
@@ -156,6 +178,9 @@ digest <- function(data, n_overlap, season_len, n_future_steps = 120, include_pa
     as_tibble() %>%
     ungroup() %>%
     mutate(idx = row_number())
+
+  data = data %>%
+    mutate(to_remove = mark_long_na_sequences({{ .observation }}, max_na_sequence))
 
   # Remember: R indexes start at 1.
   k = 1
@@ -187,10 +212,45 @@ digest <- function(data, n_overlap, season_len, n_future_steps = 120, include_pa
     k = k + 1
   }
   df = df %>% filter(adj_idx <= t_max + n_future_steps)
+  df = df %>%
+    filter(!to_remove) %>%  # note the `!`
+    select(-to_remove)
 
   df
 }
 
+
+#' Create a boolean vector indicating long sequences of NAs.
+#'
+#' This function is useful for subsequent use in filtering out these long
+#' sequences from your data.
+#'
+#' Note that the long sequences of NAs are the "TRUE"s, so to filter,
+#' be mindful of using the logical not `!`.
+#'
+#' @param observations The observations to generate the boolean vector for.
+#' @param maxgap The longest sequence of NAs to lump in (boolean-ly) with the non-NAs.
+#'
+#' @returns A boolean vector of length(observations).
+#'   TRUE  = The observation (well, lack thereof) is part of a sequence of NAs
+#'           that exceeds maxgap in length.
+#'   FALSE = Either observations, or sequences of NAs <= maxgap.
+mark_long_na_sequences <- function(observations, maxgap) {
+  # ref: https://github.com/SteffenMoritz/imputeTS/blob/a3155b041f1a7d36bdec3c152043a90c948f225e/R/na_seasplit.R#L210
+
+  # Get logical vector of the time series via is.na() and then get the
+  # run-length encoding of it. The run-length encoding describes how long
+  # the runs of FALSE (is not NA) and TRUE (is NA) are
+  rlencoding <- rle(is.na(observations))
+
+  # Runs smaller than or equal to maxgap are set FALSE
+  rlencoding$values[rlencoding$lengths <= maxgap] <- FALSE
+
+  # The original vector is being reconstructed by inverse.rls, only now the
+  # shorter runs of NAs are, like the non-NA observations, assigned "FALSE".
+  # Only the runs of NAs exceeding `maxgap` are "TRUE".
+  inverse.rle(rlencoding)
+}
 
 #' Trim digest fragments of leading/trailing NAs
 #'

@@ -10,7 +10,7 @@ test_that("anneal iterates k's", {
   fit_lm = lm(y ~ x, data = data)
   pred_lm = predict(fit_lm, new_data = data$x)
   data = data %>% mutate(fitted_obs = pred_lm)
-  d = digest(data, 1, 1)
+  d = data %>% digest(y, 1, 1)
 
   out = anneal(
     data = data,
@@ -57,7 +57,7 @@ test_that("anneal", {
   fit_lm = lm(y ~ x, data = data)
   pred_lm = predict(fit_lm, new_data = data$x)
   data = data %>% mutate(fitted_obs = pred_lm)
-  d = digest(data, 2, 4)
+  d = data %>% digest(y, 2, 4)
 
   expected_fragments = tibble(
     idx_upsam = rep(3:8, 3),
@@ -104,7 +104,7 @@ test_that("anneal warns no future vals in fragment", {
   fit_lm = lm(y ~ x, data = data)
   pred_lm = predict(fit_lm, new_data = data$x)
   data = data %>% mutate(fitted_obs = pred_lm)
-  d = digest(data, 2, 4, n_future_steps = 1)
+  d = data %>% digest(y, 2, 4, n_future_steps = 1)
 
   # Need to nest multi-warning cases.
   expect_warning(
@@ -138,7 +138,7 @@ test_that("digest handles tsibbles", {
     k = c(rep(1,6), rep(2,10)),
     adj_idx = c(11:16, 11:20)
   )
-  out = digest(data, 2, 4)
+  out = data %>% digest(x, 2, 4)
   expect_equal(out, expected)
 })
 
@@ -150,7 +150,7 @@ test_that("digest, no partial overlaps", {
     k = c(rep(1,6), rep(2,10)),
     adj_idx = c(11:16, 11:20)
   )
-  out = digest(data, 2, 4)
+  out = data %>% digest(x, 2, 4)
   expect_equal(out, expected)
 })
 
@@ -162,7 +162,7 @@ test_that("digest, partial overlaps included", {
     k = c(rep(1,9), rep(2,12)),
     adj_idx = c(8:16, 9:20)
   )
-  out = digest(data, 5, 4)
+  out = data %>% digest(x, 5, 4)
   expect_equal(out, expected)
 })
 
@@ -174,7 +174,7 @@ test_that("digest, partial overlaps excluded", {
     k = c(rep(1,9)),
     adj_idx = c(8:16)
   )
-  out = digest(data, 5, 4, include_partial_overlap = FALSE)
+  out = data %>% digest(x, 5, 4, include_partial_overlap = FALSE)
   expect_equal(out, expected)
 })
 
@@ -187,7 +187,32 @@ test_that("digest, n_future_steps limits fragment size", {
     k = c(rep(1,8), rep(2,7)),
     adj_idx = c(8:15, 9:15)
   )
-  out = digest(data, 5, 4, n_future_steps = 3)
+  out = data %>% digest(x, 5, 4, n_future_steps = 3)
+  expect_equal(out, expected)
+})
+
+test_that("digest, max_na_sequence", {
+  data = tibble(x = c(101,102,NA,104,NA,NA,107,NA,NA,NA,NA,112))
+  expected = tibble(
+    x = c(c(107,112),c(102,NA,104,107,112)),
+    idx = c(c(7,12),c(2,3,4,7,12)),
+    k = c(rep(1,2), rep(2,5)),
+    adj_idx = c(c(11,16),c(10,11,12,15,20))
+  )
+  # k = 1 spans idx 6-12
+  # k = 2 spans idx 2-12
+  out = data %>% digest(x, 3, 4, max_na_sequence = 1)
+  expect_equal(out, expected)
+})
+
+
+# an internal method (currently)
+test_that("mark_long_na_sequences", {
+  data = tibble(x = c(NA,3,3,3,NA,NA,2,2,NA,NA,NA,1,NA,2,2,NA,NA))
+  expected = c(rep(FALSE,4),rep(TRUE,2),
+               rep(FALSE,2),rep(TRUE,3),
+               rep(FALSE,4),rep(TRUE,2))
+  out = mark_long_na_sequences(data$x, 1)
   expect_equal(out, expected)
 })
 

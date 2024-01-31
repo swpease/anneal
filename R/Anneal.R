@@ -194,8 +194,8 @@ digest <- function(data, n_overlap, season_len, n_future_steps = 120, include_pa
 
 #' Trim digest fragments of leading/trailing NAs
 #'
-#' This is useful for cases where one/both ends of your fragments contain
-#' NA's that you don't want to have `predict`ed with
+#' This is useful for cases where one/both ends of your fragment(s)'s
+#' original observations contain NA's that you don't want to have `predict`ed with
 #' your `loess_fit` in `anneal`, such as a large gap beyond the end(s) of the
 #' fragment until the next non-NA observation (i.e. you don't trust the fit
 #' for these NA's).

@@ -19,8 +19,8 @@ trim_fragments_na(digest, .col, left = TRUE, right = TRUE)
 digest with trimmed fragments.
 }
 \description{
-This is useful for cases where one/both ends of your fragments contain
-NA's that you don't want to have \code{predict}ed with
+This is useful for cases where one/both ends of your fragment(s)'s
+original observations contain NA's that you don't want to have \code{predict}ed with
 your \code{loess_fit} in \code{anneal}, such as a large gap beyond the end(s) of the
 fragment until the next non-NA observation (i.e. you don't trust the fit
 for these NA's).

@@ -141,6 +141,10 @@ anneal_fragment = function(data, fitted_obs_col_name, fragment, resolution, rang
 #' You can be sure that it doesn't by making it a `tsibble` and checking
 #' for gaps.
 #'
+#' Your `n_future_steps` should be longer than your desired forecast horizon,
+#' because `anneal` will potentially shift it backwards. A sensible lower bound
+#' is (your desired forecast horizon) + (your max backwards shift in `anneal`).
+#'
 #' `max_na_sequence` is used to remove long sequences of missing data.
 #' Because `predict` can predict anywhere (i.e. the observation can be NA),
 #' this prevents them from being `predict`ed in `anneal` and thereby
@@ -148,7 +152,7 @@ anneal_fragment = function(data, fitted_obs_col_name, fragment, resolution, rang
 #'
 #' Note that potentially "empty" fragments may be returned (e.g. no data
 #' collected for a given year). To remove these, you can pass the output to
-#' `trim_fragments_na`, or set the `max_gap` argument.
+#' `trim_fragments_na`, or set the `max_na_sequence` argument.
 #'
 #' @param data The data. Must not contain gaps.
 #' @param .observation Your observations column.
@@ -156,7 +160,6 @@ anneal_fragment = function(data, fitted_obs_col_name, fragment, resolution, rang
 #' @param season_len The number of time points per season. Must be positive integer.
 #' @param n_future_steps The number of time points for fragments to extend beyond your latest observation.
 #' @param max_na_sequence The largest series of NAs (i.e. gap between observations) before filtering out.
-#' @param include_partial_overlap Whether to include the final fragment if there is only partial overlap.
 #' @returns A tibble of fragments containing cols:
 #'   idx:     The index w.r.t the original data.
 #'   k:       The fragment (1 = 1 season back, etc.).
@@ -168,8 +171,7 @@ digest <- function(data,
                    n_overlap,
                    season_len,
                    n_future_steps = 120,
-                   max_na_sequence = Inf,
-                   include_partial_overlap = TRUE) {
+                   max_na_sequence = Inf) {
   assert_that(n_overlap > 0, msg = "Need n_overlap > 0.")
   assert_that(season_len > 0, msg = "Need season_len > 0.")
   assert_that(n_future_steps > 0, msg = "Need n_future_steps > 0.")
@@ -192,16 +194,7 @@ digest <- function(data,
       break  # Nothing to overlap with.
     }
 
-    j = i - n_overlap
-    if (j <= 0) {
-      if (!include_partial_overlap) {
-        break
-      } else {
-        sprintf("Incomplete overlap for longest fragment. Missing %s of %s values.", (-j + 1), n_overlap)
-      }
-    }
-
-    j = max(j, 1)
+    j = max(i - n_overlap, 1)
     fragment = data %>%
       slice(j:n()) %>%
       mutate(
@@ -212,6 +205,7 @@ digest <- function(data,
     k = k + 1
   }
   df = df %>% filter(adj_idx <= t_max + n_future_steps)
+  # Removing large sequences of NA
   df = df %>%
     filter(!to_remove) %>%  # note the `!`
     select(-to_remove)

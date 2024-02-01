@@ -10,8 +10,7 @@ digest(
   n_overlap,
   season_len,
   n_future_steps = 120,
-  max_na_sequence = Inf,
-  include_partial_overlap = TRUE
+  max_na_sequence = Inf
 )
 }
 \arguments{
@@ -26,8 +25,6 @@ digest(
 \item{n_future_steps}{The number of time points for fragments to extend beyond your latest observation.}
 
 \item{max_na_sequence}{The largest series of NAs (i.e. gap between observations) before filtering out.}
-
-\item{include_partial_overlap}{Whether to include the final fragment if there is only partial overlap.}
 }
 \value{
 A tibble of fragments containing cols:
@@ -51,6 +48,10 @@ The data cannot contain gaps, because this function relies on indexing.
 You can be sure that it doesn't by making it a \code{tsibble} and checking
 for gaps.
 
+Your \code{n_future_steps} should be longer than your desired forecast horizon,
+because \code{anneal} will potentially shift it backwards. A sensible lower bound
+is (your desired forecast horizon) + (your max backwards shift in \code{anneal}).
+
 \code{max_na_sequence} is used to remove long sequences of missing data.
 Because \code{predict} can predict anywhere (i.e. the observation can be NA),
 this prevents them from being \code{predict}ed in \code{anneal} and thereby
@@ -58,5 +59,5 @@ prevents them from factoring into \code{anneal}'s loss calculation.
 
 Note that potentially "empty" fragments may be returned (e.g. no data
 collected for a given year). To remove these, you can pass the output to
-\code{trim_fragments_na}, or set the \code{max_gap} argument.
+\code{trim_fragments_na}, or set the \code{max_na_sequence} argument.
 }

@@ -166,19 +166,6 @@ test_that("digest, partial overlaps included", {
   expect_equal(out, expected)
 })
 
-test_that("digest, partial overlaps excluded", {
-  data = tibble(x = 101:112)
-  expected = tibble(
-    x = c(104:112),
-    idx = c(4:12),
-    k = c(rep(1,9)),
-    adj_idx = c(8:16)
-  )
-  out = data %>% digest(x, 5, 4, include_partial_overlap = FALSE)
-  expect_equal(out, expected)
-})
-
-
 test_that("digest, n_future_steps limits fragment size", {
   data = tibble(x = 101:112)
   expected = tibble(

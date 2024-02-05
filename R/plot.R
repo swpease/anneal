@@ -27,7 +27,7 @@ plot_anneal_min_loss_fragments <- function(data, x, y, anneal_output, t_max = NU
     filter(loss == min(loss, na.rm = TRUE)) %>%
     select(-loss)
   min_loss_fragments = right_join(
-    out$fragments,
+    anneal_output$fragments,
     min_losses,
     by = join_by(k, shift)
   )

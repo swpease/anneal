@@ -6,6 +6,7 @@
 \usage{
 digest(
   data,
+  .datetime,
   .observation,
   n_overlap,
   season_len,
@@ -15,6 +16,8 @@ digest(
 }
 \arguments{
 \item{data}{The data. Must not contain gaps.}
+
+\item{.datetime}{Your datetime column. The tsibble's "index".}
 
 \item{.observation}{Your observations column.}
 
@@ -27,10 +30,11 @@ digest(
 \item{max_na_sequence}{The largest series of NAs (i.e. gap between observations) before filtering out.}
 }
 \value{
-A tibble of fragments containing cols:
-idx:     The index w.r.t the original data.
-k:       The fragment (1 = 1 season back, etc.).
-adj_idx: The fragment, aligned to the latest data.
+A tibble of fragments augmented with cols:
+idx:          The index w.r.t the original data.
+k:            The fragment (1 = 1 season back, etc.).
+adj_idx:      The fragment's index aligned to the latest data.
+adj_datetime: The fragment's datetime aligned to the latest data.
 }
 \description{
 A "fragment" is 1 or more prior seasons' of data. From a baseline

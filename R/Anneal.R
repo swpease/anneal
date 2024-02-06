@@ -20,6 +20,7 @@
 #'     datetime  = The `final_idx` in terms of the original data's datetime index.
 #'   ],
 #'   losses       = tibble[
+#'     k         = The fragment (1 = 1 season back, etc.).
 #'     shift     = The shift along x-axis, relative you the `digest`'s `adj_idx`.
 #'                 `adj_idx` + `shift` = `final_idx`
 #'     loss      = The loss in the overlapping region of the fragment at `final_idx`
@@ -155,18 +156,21 @@ anneal_fragment = function(data, fitted_obs_col_name, fragment, resolution, rang
 #' `trim_fragments_na`, or set the `max_na_sequence` argument.
 #'
 #' @param data The data. Must not contain gaps.
+#' @param .datetime Your datetime column. The tsibble's "index".
 #' @param .observation Your observations column.
 #' @param n_overlap The number of time points to overlap. Must be positive integer.
 #' @param season_len The number of time points per season. Must be positive integer.
 #' @param n_future_steps The number of time points for fragments to extend beyond your latest observation.
 #' @param max_na_sequence The largest series of NAs (i.e. gap between observations) before filtering out.
-#' @returns A tibble of fragments containing cols:
-#'   idx:     The index w.r.t the original data.
-#'   k:       The fragment (1 = 1 season back, etc.).
-#'   adj_idx: The fragment, aligned to the latest data.
+#' @returns A tibble of fragments augmented with cols:
+#'   idx:          The index w.r.t the original data.
+#'   k:            The fragment (1 = 1 season back, etc.).
+#'   adj_idx:      The fragment's index aligned to the latest data.
+#'   adj_datetime: The fragment's datetime aligned to the latest data.
 #'
 #' @export
 digest <- function(data,
+                   .datetime,
                    .observation,
                    n_overlap,
                    season_len,
@@ -199,7 +203,8 @@ digest <- function(data,
       slice(j:n()) %>%
       mutate(
         k = k,
-        adj_idx = idx + (k * season_len)
+        adj_idx = idx + (k * season_len),
+        adj_datetime = {{ .datetime }} + (k * season_len)
       )
     df = bind_rows(df, fragment)
     k = k + 1

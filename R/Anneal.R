@@ -5,7 +5,6 @@
 #' @param data A tsibble. Cannot have multiple elements in key, if key exists.
 #' @param fitted_obs_col_name The column name in `data` of fitted observations from `predict(loess_fit, new_data = <your data idx>)`.
 #' @param digest Output of `anneal::digest` for smoothed data.
-#' @param resolution The step size (along x-axis) during search. Currently must equally divide 1 (e.g. 1, 0.2, or 0.5).
 #' @param range_start Start of range to search over.
 #' @param range_end End of range to search over.
 #' @param loess_fit Fitted output of `loess` on your data.
@@ -28,7 +27,7 @@
 #'   ])
 #'
 #' @export
-anneal <- function(data, fitted_obs_col_name, digest, resolution, range_start, range_end, loess_fit, loss_fn) {
+anneal <- function(data, fitted_obs_col_name, digest, range_start, range_end, loess_fit, loss_fn) {
   data = data %>% mutate(idx_data = row_number())
   # TODO: drop loss col from digest
 
@@ -36,7 +35,7 @@ anneal <- function(data, fitted_obs_col_name, digest, resolution, range_start, r
   losses = NULL
   for (k_idx in (digest %>% pull(k) %>% unique())) {
     fragment = digest %>% filter(k == k_idx)
-    annealed_frag = anneal_fragment(data, fitted_obs_col_name, fragment, resolution, range_start, range_end, loess_fit, loss_fn)
+    annealed_frag = anneal_fragment(data, fitted_obs_col_name, fragment, range_start, range_end, loess_fit, loss_fn)
     df = bind_rows(df, annealed_frag$fragments)
     losses = bind_rows(losses, annealed_frag$losses)
   }
@@ -45,18 +44,18 @@ anneal <- function(data, fitted_obs_col_name, digest, resolution, range_start, r
 }
 
 
-anneal_fragment = function(data, fitted_obs_col_name, fragment, resolution, range_start, range_end, loess_fit, loss_fn) {
+anneal_fragment = function(data, fitted_obs_col_name, fragment, range_start, range_end, loess_fit, loss_fn) {
   pred_col_name = attr(loess_fit$terms, "term.labels")
   upsampled_fragment = tibble(
-    idx_upsam = seq(min(fragment$idx), max(fragment$idx), resolution),
-    adj_idx = seq(min(fragment$adj_idx), max(fragment$adj_idx), resolution),
+    idx_upsam = seq(min(fragment$idx), max(fragment$idx)),
+    adj_idx = seq(min(fragment$adj_idx), max(fragment$adj_idx)),
     k = fragment %>% pull(k) %>% first(),
     .pred_obs = predict(loess_fit, tibble({{ pred_col_name }} := idx_upsam))
   )
 
   df = NULL
   losses = NULL
-  for (shift in seq(range_start, range_end, resolution)) {
+  for (shift in seq(range_start, range_end)) {
     # shift
     shifted_upsampled_fragment = upsampled_fragment %>%
       mutate(

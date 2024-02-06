@@ -52,7 +52,6 @@ test_that("end to end", {
     data = td,
     fitted_obs = "smoothed_td",
     digest = d,
-    resolution = 1,
     range_start = -30,
     range_end = 30,
     loess_fit = td_loess,

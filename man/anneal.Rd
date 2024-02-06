@@ -12,7 +12,6 @@ anneal(
   data,
   fitted_obs_col_name,
   digest,
-  resolution,
   range_start,
   range_end,
   loess_fit,
@@ -25,8 +24,6 @@ anneal(
 \item{fitted_obs_col_name}{The column name in \code{data} of fitted observations from \verb{predict(loess_fit, new_data = <your data idx>)}.}
 
 \item{digest}{Output of \code{anneal::digest} for smoothed data.}
-
-\item{resolution}{The step size (along x-axis) during search. Currently must equally divide 1 (e.g. 1, 0.2, or 0.5).}
 
 \item{range_start}{Start of range to search over.}
 

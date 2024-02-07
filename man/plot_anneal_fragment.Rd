@@ -4,7 +4,15 @@
 \alias{plot_anneal_fragment}
 \title{Plot an annealed fragment against the smoothed data.}
 \usage{
-plot_anneal_fragment(data, x, y, anneal_output, k = 1, truncate = TRUE)
+plot_anneal_fragment(
+  data,
+  x,
+  y,
+  anneal_output,
+  fragment_obs_col_name,
+  k = 1,
+  truncate = TRUE
+)
 }
 \arguments{
 \item{data}{.}
@@ -14,6 +22,8 @@ plot_anneal_fragment(data, x, y, anneal_output, k = 1, truncate = TRUE)
 \item{y}{The column of smoothed (fitted) observations.}
 
 \item{anneal_output}{Output of \code{anneal}.}
+
+\item{fragment_obs_col_name}{The (possibly smoothed) fragments' observations column name.}
 
 \item{k}{Which fragment number to plot.}
 

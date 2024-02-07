@@ -44,7 +44,8 @@ test_that("end to end", {
   # end loess
 
   # annealing
-  d = td %>% digest(observation,
+  d = td %>% digest(datetime,
+                    observation,
                     n_overlap = 55,
                     season_len = 365,
                     max_na_sequence = 100)
@@ -54,7 +55,6 @@ test_that("end to end", {
     digest = d,
     range_start = -30,
     range_end = 30,
-    loess_fit = td_loess,
     loss_fn = slope_weighted_rmse
   )
   # end annealing
@@ -66,18 +66,18 @@ test_that("end to end", {
   name = "min_loss_fragments_plot"
   expect_snapshot_plot(
     name,
-    td %>% plot_anneal_min_loss_fragments(datetime, smoothed_td, out)
+    td %>% plot_anneal_min_loss_fragments(datetime, smoothed_td, out, "smoothed_td")
   )
 
   name = "original_fragments_plot"
   expect_snapshot_plot(
     name,
-    td %>% plot_anneal_original_fragments(datetime, smoothed_td, out)
+    td %>% plot_anneal_original_fragments(datetime, smoothed_td, out, "smoothed_td")
   )
 
   name = "single_fragment_plot"
   expect_snapshot_plot(
     name,
-    td %>% plot_anneal_fragment(datetime, smoothed_td, out)
+    td %>% plot_anneal_fragment(datetime, smoothed_td, out, "smoothed_td")
   )
 })

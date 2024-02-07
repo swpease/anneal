@@ -4,7 +4,14 @@
 \alias{plot_anneal_min_loss_fragments}
 \title{Plot the min-loss shifted fragments against the original data.}
 \usage{
-plot_anneal_min_loss_fragments(data, x, y, anneal_output, t_max = NULL)
+plot_anneal_min_loss_fragments(
+  data,
+  x,
+  y,
+  anneal_output,
+  fragment_obs_col_name,
+  t_max = NULL
+)
 }
 \arguments{
 \item{data}{The data.}
@@ -14,6 +21,8 @@ plot_anneal_min_loss_fragments(data, x, y, anneal_output, t_max = NULL)
 \item{y}{The (possibly smoothed) observations.}
 
 \item{anneal_output}{Output of \code{anneal}.}
+
+\item{fragment_obs_col_name}{The (possibly smoothed) fragments' observations column name.}
 
 \item{t_max}{The upper xlim.}
 }

@@ -12,13 +12,19 @@
 #' @param x The datetime column.
 #' @param y The (possibly smoothed) observations.
 #' @param anneal_output Output of `anneal`.
+#' @param fragment_obs_col_name The (possibly smoothed) fragments' observations column name.
 #' @param t_max The upper xlim.
 #'
 #' @export
-plot_anneal_min_loss_fragments <- function(data, x, y, anneal_output, t_max = NULL) {
+plot_anneal_min_loss_fragments <- function(data,
+                                           x,
+                                           y,
+                                           anneal_output,
+                                           fragment_obs_col_name,
+                                           t_max = NULL) {
   if (is.null(t_max)) {
     t_max = anneal_output$fragments %>%
-      pull(datetime) %>%
+      pull(final_datetime) %>%
       max()
   }
 
@@ -38,8 +44,8 @@ plot_anneal_min_loss_fragments <- function(data, x, y, anneal_output, t_max = NU
     geom_line(
       data = min_loss_fragments,
       mapping = aes(
-        x = datetime,
-        y = .pred_obs,
+        x = final_datetime,
+        y = .data[[fragment_obs_col_name]],
         color = k,
       )
     ) +
@@ -70,13 +76,19 @@ plot_anneal_min_loss_fragments <- function(data, x, y, anneal_output, t_max = NU
 #' @param x The datetime column.
 #' @param y The (possibly smoothed) observations.
 #' @param anneal_output Output of `anneal`.
+#' @param fragment_obs_col_name The (possibly smoothed) fragments' observations column name.
 #' @param t_max The upper xlim.
 #'
 #' @export
-plot_anneal_original_fragments <- function(data, x, y, anneal_output, t_max = NULL) {
+plot_anneal_original_fragments <- function(data,
+                                           x,
+                                           y,
+                                           anneal_output,
+                                           fragment_obs_col_name,
+                                           t_max = NULL) {
   if (is.null(t_max)) {
     t_max = anneal_output$fragments %>%
-      pull(datetime) %>%
+      pull(final_datetime) %>%
       max()
   }
 
@@ -88,8 +100,8 @@ plot_anneal_original_fragments <- function(data, x, y, anneal_output, t_max = NU
     geom_line(
       data = original_fragments,
       mapping = aes(
-        x = datetime,
-        y = .pred_obs,
+        x = final_datetime,
+        y = .data[[fragment_obs_col_name]],
         color = k,
       )
     ) +
@@ -120,11 +132,18 @@ plot_anneal_original_fragments <- function(data, x, y, anneal_output, t_max = NU
 #' @param x The datetime column.
 #' @param y The column of smoothed (fitted) observations.
 #' @param anneal_output Output of `anneal`.
+#' @param fragment_obs_col_name The (possibly smoothed) fragments' observations column name.
 #' @param k Which fragment number to plot.
 #' @param truncate Truncate the plot to `data`'s most recent observation?
 #'
 #' @export
-plot_anneal_fragment <- function(data, x, y, anneal_output, k = 1, truncate = TRUE) {
+plot_anneal_fragment <- function(data,
+                                 x,
+                                 y,
+                                 anneal_output,
+                                 fragment_obs_col_name,
+                                 k = 1,
+                                 truncate = TRUE) {
   # Filter to particular k
   k_val = k  # prevent shadowing
   anneal_output$fragments = anneal_output$fragments %>% filter(k == k_val)
@@ -133,7 +152,7 @@ plot_anneal_fragment <- function(data, x, y, anneal_output, k = 1, truncate = TR
   if (truncate) {
     anneal_output$fragments = anneal_output$fragments %>%
       filter(
-        datetime < (data %>% pull({{ x }}) %>% max())
+        final_datetime < (data %>% pull({{ x }}) %>% max())
       )
   }
 
@@ -149,8 +168,8 @@ plot_anneal_fragment <- function(data, x, y, anneal_output, k = 1, truncate = TR
     geom_line(
       data = anneal_output$fragments,
       mapping = aes(
-        x = datetime,
-        y = .pred_obs,
+        x = final_datetime,
+        y = .data[[fragment_obs_col_name]],
         group = shift,
         color = "Others",
       ),
@@ -159,8 +178,8 @@ plot_anneal_fragment <- function(data, x, y, anneal_output, k = 1, truncate = TR
     geom_line(
       data = original,
       mapping = aes(
-        x = datetime,
-        y = .pred_obs,
+        x = final_datetime,
+        y = .data[[fragment_obs_col_name]],
         group = shift,
         color = "Original"
       ),
@@ -168,8 +187,8 @@ plot_anneal_fragment <- function(data, x, y, anneal_output, k = 1, truncate = TR
     geom_line(
       data = best,
       mapping = aes(
-        x = datetime,
-        y = .pred_obs,
+        x = final_datetime,
+        y = .data[[fragment_obs_col_name]],
         group = shift,
         color = "Min Loss"
       ),

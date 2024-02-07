@@ -1,23 +1,20 @@
-#' Assumptions:
-#'   1. Object passed to `loess_fit` had the formula `[var1] ~ [var2]`, e.g. `obs ~ date_time`.
-#'   2. Object passed to `data` includes the `[var1]` col from Assumption #1 with the same name, e.g. `obs`.
+#' Anneal fragments of a digest to your data.
 #'
 #' @param data A tsibble. Cannot have multiple elements in key, if key exists.
-#' @param fitted_obs_col_name The column name in `data` of fitted observations from `predict(loess_fit, new_data = <your data idx>)`.
+#' @param fitted_obs_col_name The column name in `data` and `digest`
+#'   of fitted observations from `predict(loess_fit, new_data = <your data idx>)`.
 #' @param digest Output of `anneal::digest` for smoothed data.
 #' @param range_start Start of range to search over.
 #' @param range_end End of range to search over.
-#' @param loess_fit Fitted output of `loess` on your data.
 #' @param loss_fn f(original, fragment) The loss function.
 #' @returns list(
-#'   shifted_data = tibble[
-#'     k         = The fragment (1 = 1 season back, etc.).
-#'     .pred_obs = The fragment's predicted value at `final_idx` for a particular `shift`.
-#'     final_idx = The index as aligned to the original data's indexes.
-#'     shift     = The shift along x-axis, relative you the `digest`'s `adj_idx`.
-#'                 `adj_idx` + `shift` = `final_idx`
-#'     datetime  = The `final_idx` in terms of the original data's datetime index.
-#'   ],
+#'   shifted_data = tibble. Your original data, repeated (range_end - range_start)
+#'                  times, with each repetition augmented by:
+#'     final_idx       = The shifted index as aligned to the original data's indexes.
+#'     final_datetime  = The `final_idx` in terms of the original data's datetime index.
+#'     shift           = The shift along x-axis, relative you the `digest`'s `adj_idx`.
+#'                       `adj_idx` + `shift` = `final_idx`
+#'   ,
 #'   losses       = tibble[
 #'     k         = The fragment (1 = 1 season back, etc.).
 #'     shift     = The shift along x-axis, relative you the `digest`'s `adj_idx`.
@@ -27,7 +24,7 @@
 #'   ])
 #'
 #' @export
-anneal <- function(data, fitted_obs_col_name, digest, range_start, range_end, loess_fit, loss_fn) {
+anneal <- function(data, fitted_obs_col_name, digest, range_start, range_end, loss_fn) {
   data = data %>% mutate(idx_data = row_number())
   # TODO: drop loss col from digest
 
@@ -35,7 +32,7 @@ anneal <- function(data, fitted_obs_col_name, digest, range_start, range_end, lo
   losses = NULL
   for (k_idx in (digest %>% pull(k) %>% unique())) {
     fragment = digest %>% filter(k == k_idx)
-    annealed_frag = anneal_fragment(data, fitted_obs_col_name, fragment, range_start, range_end, loess_fit, loss_fn)
+    annealed_frag = anneal_fragment(data, fitted_obs_col_name, fragment, range_start, range_end, loss_fn)
     df = bind_rows(df, annealed_frag$fragments)
     losses = bind_rows(losses, annealed_frag$losses)
   }
@@ -44,36 +41,22 @@ anneal <- function(data, fitted_obs_col_name, digest, range_start, range_end, lo
 }
 
 
-anneal_fragment = function(data, fitted_obs_col_name, fragment, range_start, range_end, loess_fit, loss_fn) {
-  pred_col_name = attr(loess_fit$terms, "term.labels")
-  upsampled_fragment = tibble(
-    idx_upsam = seq(min(fragment$idx), max(fragment$idx)),
-    adj_idx = seq(min(fragment$adj_idx), max(fragment$adj_idx)),
-    k = fragment %>% pull(k) %>% first(),
-    .pred_obs = predict(loess_fit, tibble({{ pred_col_name }} := idx_upsam))
-  )
-
+anneal_fragment = function(data, fitted_obs_col_name, fragment, range_start, range_end, loss_fn) {
   df = NULL
   losses = NULL
   for (shift in seq(range_start, range_end)) {
-    # shift
-    shifted_upsampled_fragment = upsampled_fragment %>%
+    shifted_fragment = fragment %>%
       mutate(
         final_idx = adj_idx + shift,
+        final_datetime = adj_datetime + shift,
         shift = shift
       )
 
-    # Remove non-(near)-integer indexes
-    shifted_upsampled_fragment <- shifted_upsampled_fragment %>%
-      filter(near(final_idx %% 1, 1) | near(final_idx %% 1, 0)) %>%  # `near` in case of, e.g. res = 0.3333
-      mutate(final_idx = round(final_idx))
-
-    # Add date col.
     # how far beyond the "real" ts does our shifted fragment extend?
     n_to_append = max(
       0,
-      max(shifted_upsampled_fragment$final_idx) - max(data$idx_data)
-    )  # If lt 0, (a) it'll mess things up, and (b) you can't forecast anyway.
+      max(shifted_fragment$final_idx) - max(data$idx_data)
+    )  # If <= 0 you can't forecast.
     if (n_to_append == 0) {
       frag_k = fragment %>% pull(k) %>% first()
       warning(
@@ -87,31 +70,20 @@ anneal_fragment = function(data, fitted_obs_col_name, fragment, range_start, ran
         call. = FALSE
       )
     }
-    # extend our dates that far
-    extended_dates = data %>%
-      select(index(.)) %>%  # ref: https://magrittr.tidyverse.org/reference/pipe.html#using-the-dot-for-secondary-purposes
-      append_row(n = n_to_append) %>%
-      mutate(idx_dates = row_number())  # -> tsibble[date_col]
-    # join
-    shifted_upsampled_fragment <- left_join(
-      shifted_upsampled_fragment,
-      extended_dates,
-      by = join_by(final_idx == idx_dates),
-      relationship = "one-to-one"
-    )  # date col will be whatever the `index` of the input `data` tsibble is.
 
     # Loss calc
     overlap = inner_join(
       data,
-      shifted_upsampled_fragment,
+      shifted_fragment,
       by = join_by(idx_data == final_idx)
     )  # -> tsibble
     # TODO: check overlap [min,max]
-    original_obs = overlap %>%
-      as_tibble() %>%
-      ungroup() %>%
-      pull(fitted_obs_col_name)  # woof
-    loss = loss_fn(original_obs, overlap$.pred_obs)
+    fitted_obs_x_name = paste0(fitted_obs_col_name, ".x")
+    fitted_obs_y_name = paste0(fitted_obs_col_name, ".y")
+    loss = loss_fn(
+      overlap %>% pull(fitted_obs_x_name),
+      overlap %>% pull(fitted_obs_y_name)
+    )
     loss_row = tibble(
       k = fragment %>% pull(k) %>% first(),
       shift = shift,
@@ -119,7 +91,7 @@ anneal_fragment = function(data, fitted_obs_col_name, fragment, range_start, ran
     )
 
     # Write
-    df = bind_rows(df, shifted_upsampled_fragment)
+    df = bind_rows(df, shifted_fragment)
     losses = bind_rows(losses, loss_row)
   }
 
@@ -154,7 +126,7 @@ anneal_fragment = function(data, fitted_obs_col_name, fragment, range_start, ran
 #' collected for a given year). To remove these, you can pass the output to
 #' `trim_fragments_na`, or set the `max_na_sequence` argument.
 #'
-#' @param data The data. Must not contain gaps.
+#' @param data tsibble. The data. Must not contain gaps.
 #' @param .datetime Your datetime column. The tsibble's "index".
 #' @param .observation Your observations column.
 #' @param n_overlap The number of time points to overlap. Must be positive integer.

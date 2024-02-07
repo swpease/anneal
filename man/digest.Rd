@@ -15,7 +15,7 @@ digest(
 )
 }
 \arguments{
-\item{data}{The data. Must not contain gaps.}
+\item{data}{tsibble. The data. Must not contain gaps.}
 
 \item{.datetime}{Your datetime column. The tsibble's "index".}
 

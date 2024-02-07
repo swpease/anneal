@@ -18,22 +18,15 @@ test_that("anneal iterates k's", {
     digest = d,
     range_start = 0,
     range_end = 0,
-    loess_fit = fit_lm,
     loss_fn = rmse
   )
 
-  expected_fragments = tibble(
-    idx_upsam = c(c(2,3),c(1,2,3)),
-    adj_idx = c(c(3,4),c(3,4,5)),
-    k = c(c(1,1),c(2,2,2)),
-    .pred_obs = setNames(idx_upsam, c(c(1,2),c(1,2,3))),  # ref: https://adv-r.hadley.nz/vectors-chap.html#attr-names
-    final_idx = adj_idx,
-    shift = 0,
-    datetime = c(
-      as.Date("2017-01-03") + 0:1,
-      as.Date("2017-01-03") + 0:2
+  expected_fragments = d %>%
+    mutate(
+      final_idx = adj_idx,
+      final_datetime = adj_datetime,
+      shift = 0
     )
-  )
   expected_losses = tibble(
     k = c(1,2),
     shift = c(0,0),
@@ -49,7 +42,6 @@ test_that("anneal", {
     x = 1:8,
     y = 1:8,
     datetime = as.Date("2017-01-01") + 0:7,
-    # idx_data = 1:8,
     ) %>%
     as_tsibble()
 
@@ -58,19 +50,12 @@ test_that("anneal", {
   data = data %>% mutate(fitted_obs = pred_lm)
   d = data %>% digest(datetime, y, 2, 4)
 
-  expected_fragments = tibble(
-    idx_upsam = rep(3:8, 3),
-    adj_idx = idx_upsam + 4,
-    k = 1,
-    .pred_obs = setNames(idx_upsam, rep(1:6,3)),  # ref: https://adv-r.hadley.nz/vectors-chap.html#attr-names
-    final_idx = c(6:11,7:12,8:13),
-    shift = c(rep(-1,6),rep(0,6),rep(1,6)),
-    datetime = c(
-      as.Date("2017-01-06") + 0:5,
-      as.Date("2017-01-07") + 0:5,
-      as.Date("2017-01-08") + 0:5
-    )
+  expected_aug = tibble(
+    final_idx = c(6:11, 7:12, 8:13),
+    final_datetime = c(as.Date("2017-01-06") + 0:5, as.Date("2017-01-07") + 0:5, as.Date("2017-01-08") + 0:5),
+    shift = c(rep(-1, 6), rep(0, 6), rep(1, 6))
   )
+  expected_fragments = bind_cols(bind_rows(d, d, d), expected_aug)
   expected_losses = tibble(
     k = c(1,1,1),
     shift = c(-1,0,1),
@@ -83,7 +68,6 @@ test_that("anneal", {
     digest = d,
     range_start = -1,
     range_end = 1,
-    loess_fit = fit_lm,
     loss_fn = rmse
     )
   expect_equal(out$losses, expected_losses)
@@ -113,7 +97,6 @@ test_that("anneal warns no future vals in fragment", {
         digest = d,
         range_start = -2,
         range_end = 1,
-        loess_fit = fit_lm,
         loss_fn = rmse
       )
     )

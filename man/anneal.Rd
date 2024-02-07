@@ -2,26 +2,15 @@
 % Please edit documentation in R/Anneal.R
 \name{anneal}
 \alias{anneal}
-\title{Assumptions:
-\enumerate{
-\item Object passed to \code{loess_fit} had the formula \verb{[var1] ~ [var2]}, e.g. \code{obs ~ date_time}.
-\item Object passed to \code{data} includes the \verb{[var1]} col from Assumption #1 with the same name, e.g. \code{obs}.
-}}
+\title{Anneal fragments of a digest to your data.}
 \usage{
-anneal(
-  data,
-  fitted_obs_col_name,
-  digest,
-  range_start,
-  range_end,
-  loess_fit,
-  loss_fn
-)
+anneal(data, fitted_obs_col_name, digest, range_start, range_end, loss_fn)
 }
 \arguments{
 \item{data}{A tsibble. Cannot have multiple elements in key, if key exists.}
 
-\item{fitted_obs_col_name}{The column name in \code{data} of fitted observations from \verb{predict(loess_fit, new_data = <your data idx>)}.}
+\item{fitted_obs_col_name}{The column name in \code{data} and \code{digest}
+of fitted observations from \verb{predict(loess_fit, new_data = <your data idx>)}.}
 
 \item{digest}{Output of \code{anneal::digest} for smoothed data.}
 
@@ -29,19 +18,19 @@ anneal(
 
 \item{range_end}{End of range to search over.}
 
-\item{loess_fit}{Fitted output of \code{loess} on your data.}
-
 \item{loss_fn}{f(original, fragment) The loss function.}
 }
 \value{
 list(
-shifted_data = tibble,
+shifted_data = tibble. Your original data, repeated (range_end - range_start)
+times, with each repetition augmented by:
+final_idx       = The shifted index as aligned to the original data's indexes.
+final_datetime  = The \code{final_idx} in terms of the original data's datetime index.
+shift           = The shift along x-axis, relative you the \code{digest}'s \code{adj_idx}.
+\code{adj_idx} + \code{shift} = \code{final_idx}
+,
 losses       = tibble)
 }
 \description{
-Assumptions:
-\enumerate{
-\item Object passed to \code{loess_fit} had the formula \verb{[var1] ~ [var2]}, e.g. \code{obs ~ date_time}.
-\item Object passed to \code{data} includes the \verb{[var1]} col from Assumption #1 with the same name, e.g. \code{obs}.
-}
+Anneal fragments of a digest to your data.
 }

@@ -4,12 +4,12 @@
 \alias{anneal}
 \title{Anneal fragments of a digest to your data.}
 \usage{
-anneal(data, fitted_obs_col_name, digest, range_start, range_end, loss_fn)
+anneal(data, fitted_obs, digest, range_start, range_end, loss_fn)
 }
 \arguments{
 \item{data}{A tsibble. Cannot have multiple elements in key, if key exists.}
 
-\item{fitted_obs_col_name}{The column name in \code{data} and \code{digest}
+\item{fitted_obs}{The column in \code{data} (assumed same name in \code{digest})
 of fitted observations from \verb{predict(loess_fit, new_data = <your data idx>)}.}
 
 \item{digest}{Output of \code{anneal::digest} for smoothed data.}

@@ -1,7 +1,7 @@
 #' Anneal fragments of a digest to your data.
 #'
 #' @param data A tsibble. Cannot have multiple elements in key, if key exists.
-#' @param fitted_obs_col_name The column name in `data` and `digest`
+#' @param fitted_obs The column in `data` (assumed same name in `digest`)
 #'   of fitted observations from `predict(loess_fit, new_data = <your data idx>)`.
 #' @param digest Output of `anneal::digest` for smoothed data.
 #' @param range_start Start of range to search over.
@@ -24,7 +24,7 @@
 #'   ])
 #'
 #' @export
-anneal <- function(data, fitted_obs_col_name, digest, range_start, range_end, loss_fn) {
+anneal <- function(data, fitted_obs, digest, range_start, range_end, loss_fn) {
   data = data %>% mutate(idx_data = row_number())
   # TODO: drop loss col from digest
 
@@ -32,7 +32,7 @@ anneal <- function(data, fitted_obs_col_name, digest, range_start, range_end, lo
   losses = NULL
   for (k_idx in (digest %>% pull(k) %>% unique())) {
     fragment = digest %>% filter(k == k_idx)
-    annealed_frag = anneal_fragment(data, fitted_obs_col_name, fragment, range_start, range_end, loss_fn)
+    annealed_frag = data %>% anneal_fragment({{ fitted_obs }}, fragment, range_start, range_end, loss_fn)
     df = bind_rows(df, annealed_frag$fragments)
     losses = bind_rows(losses, annealed_frag$losses)
   }
@@ -41,7 +41,7 @@ anneal <- function(data, fitted_obs_col_name, digest, range_start, range_end, lo
 }
 
 
-anneal_fragment = function(data, fitted_obs_col_name, fragment, range_start, range_end, loss_fn) {
+anneal_fragment = function(data, fitted_obs, fragment, range_start, range_end, loss_fn) {
   df = NULL
   losses = NULL
   for (shift in seq(range_start, range_end)) {
@@ -78,6 +78,11 @@ anneal_fragment = function(data, fitted_obs_col_name, fragment, range_start, ran
       by = join_by(idx_data == final_idx)
     )  # -> tsibble
     # TODO: check overlap [min,max]
+    fitted_obs_col_name = data %>%
+      as_tibble() %>%
+      ungroup() %>%
+      select({{ fitted_obs }}) %>%
+      names()
     fitted_obs_x_name = paste0(fitted_obs_col_name, ".x")
     fitted_obs_y_name = paste0(fitted_obs_col_name, ".y")
     loss = loss_fn(

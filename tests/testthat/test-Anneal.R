@@ -12,9 +12,8 @@ test_that("anneal iterates k's", {
   data = data %>% mutate(fitted_obs = pred_lm)
   d = data %>% digest(datetime, y, 1, 1)
 
-  out = anneal(
-    data = data,
-    fitted_obs = "fitted_obs",
+  out = data %>% anneal(
+    fitted_obs = fitted_obs,
     digest = d,
     range_start = 0,
     range_end = 0,
@@ -62,9 +61,8 @@ test_that("anneal", {
     loss = c(3,4,5)
   )
 
-  out = anneal(
-    data = data,
-    fitted_obs = "fitted_obs",
+  out = data %>% anneal(
+    fitted_obs = fitted_obs,
     digest = d,
     range_start = -1,
     range_end = 1,
@@ -91,9 +89,8 @@ test_that("anneal warns no future vals in fragment", {
   # Need to nest multi-warning cases.
   expect_warning(
     expect_warning(
-      anneal(
-        data = data,
-        fitted_obs = "fitted_obs",
+      data %>% anneal(
+        fitted_obs = fitted_obs,
         digest = d,
         range_start = -2,
         range_end = 1,

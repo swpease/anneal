@@ -49,14 +49,14 @@ test_that("end to end", {
                     n_overlap = 55,
                     season_len = 365,
                     max_na_sequence = 100)
-  out = anneal(
-    data = td,
-    fitted_obs = "smoothed_td",
-    digest = d,
-    range_start = -30,
-    range_end = 30,
-    loss_fn = slope_weighted_rmse
-  )
+  out = td %>%
+    anneal(
+      fitted_obs = smoothed_td,
+      digest = d,
+      range_start = -30,
+      range_end = 30,
+      loss_fn = slope_weighted_rmse
+    )
   # end annealing
 
   # plotting tests

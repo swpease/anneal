@@ -10,7 +10,9 @@ test_that("anneal iterates k's", {
   fit_lm = lm(y ~ x, data = data)
   pred_lm = predict(fit_lm, newdata = data %>% select(x))
   data = data %>% mutate(fitted_obs = pred_lm)
-  d = data %>% digest(datetime, y, 1, 1)
+  d = data %>% digest(
+    datetime, y, 1, 1,
+    min_fragment_len = 1)  # overruling the default min for this test.
 
   out = data %>% anneal(
     fitted_obs = fitted_obs,
@@ -196,6 +198,36 @@ test_that("digest, max_na_sequence", {
   expect_equal(out, expected)
 })
 
+
+test_that("digest, min_frag_len", {
+  data = tibble(
+    y = 1:9,
+    x = 1:9,
+    datetime = as.Date("2017-01-01") + 0:8,
+  ) %>%
+    as_tsibble()
+  expected = tibble(
+    y = 4:6,
+    x = 4:6,
+    datetime = as.Date("2017-01-04") + 0:2,
+    idx = 4:6,
+    k = 1,
+    adj_idx = 8:10,
+    adj_datetime = as.Date("2017-01-08") + 0:2
+  )
+
+  out = data %>% digest(
+    datetime, y, 2, 4,
+    n_future_steps = 1,
+    min_fragment_len = 3)
+  out2 = data %>% digest(
+    datetime, y, 2, 4,
+    n_future_steps = 1,
+    min_fragment_len = 4)
+
+  expect_equal(out, expected)
+  expect_equal(nrow(out2), 0)
+})
 
 # an internal method (currently)
 test_that("mark_long_na_sequences", {

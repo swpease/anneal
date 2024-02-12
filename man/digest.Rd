@@ -11,7 +11,8 @@ digest(
   n_overlap,
   season_len,
   n_future_steps = 120,
-  max_na_sequence = Inf
+  max_na_sequence = Inf,
+  min_fragment_len = 2
 )
 }
 \arguments{
@@ -28,6 +29,8 @@ digest(
 \item{n_future_steps}{The number of time points for fragments to extend beyond your latest observation.}
 
 \item{max_na_sequence}{The largest series of NAs (i.e. gap between observations) before filtering out.}
+
+\item{min_fragment_len}{The minimum length of a fragment to include in output.}
 }
 \value{
 A tibble of fragments augmented with cols:
@@ -61,7 +64,13 @@ Because \code{predict} can predict anywhere (i.e. the observation can be NA),
 this prevents them from being \code{predict}ed in \code{anneal} and thereby
 prevents them from factoring into \code{anneal}'s loss calculation.
 
-Note that potentially "empty" fragments may be returned (e.g. no data
-collected for a given year). To remove these, you can pass the output to
-\code{trim_fragments_na}, or set the \code{max_na_sequence} argument.
+Fragments shorter than \code{min_fragment_len}, after any trimming via
+\code{max_na_sequence} (though the fragment may still contain or
+have at its ends or even be entirely NA observations,
+which count towards the length) are removed.
+It defaults to 2, because:
+\itemize{
+\item What can you do with a fragment of length 1?
+\item tsibble doesn't like it.
+}
 }

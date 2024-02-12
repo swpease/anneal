@@ -8,7 +8,7 @@ test_that("anneal iterates k's", {
     as_tsibble()
 
   fit_lm = lm(y ~ x, data = data)
-  pred_lm = predict(fit_lm, new_data = data$x)
+  pred_lm = predict(fit_lm, newdata = data %>% select(x))
   data = data %>% mutate(fitted_obs = pred_lm)
   d = data %>% digest(datetime, y, 1, 1)
 
@@ -45,7 +45,7 @@ test_that("anneal", {
     as_tsibble()
 
   fit_lm = lm(y ~ x, data = data)
-  pred_lm = predict(fit_lm, new_data = data$x)
+  pred_lm = predict(fit_lm, newdata = data %>% select(x))
   data = data %>% mutate(fitted_obs = pred_lm)
   d = data %>% digest(datetime, y, 2, 4)
 
@@ -82,7 +82,7 @@ test_that("anneal warns no future vals in fragment", {
     as_tsibble()
 
   fit_lm = lm(y ~ x, data = data)
-  pred_lm = predict(fit_lm, new_data = data$x)
+  pred_lm = predict(fit_lm, newdata = data %>% select(x))
   data = data %>% mutate(fitted_obs = pred_lm)
   d = data %>% digest(datetime, y, 2, 4, n_future_steps = 1)
 

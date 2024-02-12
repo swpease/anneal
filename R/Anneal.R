@@ -127,9 +127,13 @@ anneal_fragment = function(data, fitted_obs, fragment, range_start, range_end, l
 #' this prevents them from being `predict`ed in `anneal` and thereby
 #' prevents them from factoring into `anneal`'s loss calculation.
 #'
-#' Note that potentially "empty" fragments may be returned (e.g. no data
-#' collected for a given year). To remove these, you can pass the output to
-#' `trim_fragments_na`, or set the `max_na_sequence` argument.
+#' Fragments shorter than `min_fragment_len`, after any trimming via
+#' `max_na_sequence` (though the fragment may still contain or
+#' have at its ends or even be entirely NA observations,
+#' which count towards the length) are removed.
+#' It defaults to 2, because:
+#'   - What can you do with a fragment of length 1?
+#'   - tsibble doesn't like it.
 #'
 #' @param data tsibble. The data. Must not contain gaps.
 #' @param .datetime Your datetime column. The tsibble's "index".
@@ -138,6 +142,7 @@ anneal_fragment = function(data, fitted_obs, fragment, range_start, range_end, l
 #' @param season_len The number of time points per season. Must be positive integer.
 #' @param n_future_steps The number of time points for fragments to extend beyond your latest observation.
 #' @param max_na_sequence The largest series of NAs (i.e. gap between observations) before filtering out.
+#' @param min_fragment_len The minimum length of a fragment to include in output.
 #' @returns A tibble of fragments augmented with cols:
 #'   idx:          The index w.r.t the original data.
 #'   k:            The fragment (1 = 1 season back, etc.).
@@ -151,7 +156,8 @@ digest <- function(data,
                    n_overlap,
                    season_len,
                    n_future_steps = 120,
-                   max_na_sequence = Inf) {
+                   max_na_sequence = Inf,
+                   min_fragment_len = 2) {
   assert_that(n_overlap > 0, msg = "Need n_overlap > 0.")
   assert_that(season_len > 0, msg = "Need season_len > 0.")
   assert_that(n_future_steps > 0, msg = "Need n_future_steps > 0.")
@@ -190,6 +196,11 @@ digest <- function(data,
   df = df %>%
     filter(!to_remove) %>%  # note the `!`
     select(-to_remove)
+  # Removing short fragments
+  df = df %>%
+    group_by(k) %>%
+    filter(n() >= min_fragment_len) %>%
+    ungroup()
 
   df
 }

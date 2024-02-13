@@ -53,23 +53,13 @@ anneal_fragment = function(data, fitted_obs, fragment, range_start, range_end, l
       )
 
     # how far beyond the "real" ts does our shifted fragment extend?
-    n_to_append = max(
-      0,
-      max(shifted_fragment$final_idx) - max(data$idx_data)
-    )  # If <= 0 you can't forecast.
-    if (n_to_append == 0) {
-      frag_k = fragment %>% pull(k) %>% first()
-      warning(
-        paste(
-        "Fragment k =", frag_k,
-        "with shift =", shift,
-        "doesn't extend beyond original series.\n",
-        "You may want to remove this fragment from the digest output,\n",
-        "or remove this shift from this anneal output."
-        ),
-        call. = FALSE
-      )
-    }
+    # n_to_append = max(
+    #   0,
+    #   max(shifted_fragment$final_idx) - max(data$idx_data)
+    # )  # If <= 0 you can't forecast.
+    # if (n_to_append == 0) {
+    #   frag_k = fragment %>% pull(k) %>% first()
+    # }
 
     # Loss calc
     overlap = inner_join(

@@ -51,6 +51,9 @@
 #'            - .smoothed_obs_name,
 #'            - tmax_offset,
 #'            - (outer/inner/anneal)-args
+#'          Plus
+#'            - tmax_idx, which is the "now" index; i.e. larger indexes
+#'              are the "future".
 #'          Also, annealing information. A list, with an element for each outer-
 #'          loop digest fragment.
 #'            - anneal_output,
@@ -92,7 +95,6 @@ anneal_cv_anneal <- function(data,
     range_end = 20,
     loss_fn = list(slope_weighted_rmse = slope_weighted_rmse)
   )
-  # browser()
   default_anneal_args[names(anneal_args)] = anneal_args
   anneal_args = default_anneal_args
 
@@ -147,6 +149,7 @@ anneal_cv_anneal <- function(data,
   output_info = list(
     .smoothed_obs_name = smoothed_obs_col_name,
     tmax_offset = tmax_offset,
+    tmax_idx = idx_max,
     outer_digest_args = od_args,
     inner_digest_args = id_args,
     anneal_args = anneal_args,
@@ -183,6 +186,7 @@ anneal_cv_anneal <- function(data,
       ungroup() %>%
       select(adj_idx) %>%
       min()
+    test_frag_unpadded = test_frag  # for output for plotting
     test_frag = test_frag %>% append_row(-(min_idx - 1))
 
     train_frags = inner_digest %>% filter(k != k_idx)
@@ -196,7 +200,7 @@ anneal_cv_anneal <- function(data,
       )
     output_info$anneals[[k_idx]] = list(
       anneal_output = out,
-      test_data_annealed_outer_fragment = test_frag,
+      test_data_annealed_outer_fragment = test_frag_unpadded,
       full_test_data = full_test_frag,
       k_test = k_idx
     )

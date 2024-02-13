@@ -42,6 +42,8 @@ test_that("cv anneal output contents", {
   expect_equal(cv_out$anneal_args$loss_fn, list("rmse" = rmse))
   expect_equal(season_len, cv_out$outer_digest_args$season_len)
   expect_equal(season_len, cv_out$inner_digest_args$season_len)
+  expect_equal(cv_out$tmax_idx, 17)
+
 
   # should get four-fold cv (four seasons)
   expect_equal(4, length(cv_out$anneals))

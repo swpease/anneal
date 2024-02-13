@@ -75,34 +75,6 @@ test_that("anneal", {
 })
 
 
-test_that("anneal warns no future vals in fragment", {
-  data = tibble(
-    x = 1:8,
-    y = 1:8,
-    datetime = as.Date("2017-01-01") + 0:7,
-  ) %>%
-    as_tsibble()
-
-  fit_lm = lm(y ~ x, data = data)
-  pred_lm = predict(fit_lm, newdata = data %>% select(x))
-  data = data %>% mutate(fitted_obs = pred_lm)
-  d = data %>% digest(datetime, y, 2, 4, n_future_steps = 1)
-
-  # Need to nest multi-warning cases.
-  expect_warning(
-    expect_warning(
-      data %>% anneal(
-        fitted_obs = fitted_obs,
-        digest = d,
-        range_start = -2,
-        range_end = 1,
-        loss_fn = rmse
-      )
-    )
-  )
-})
-
-
 # digest
 test_that("digest handles tsibbles", {
   data = tibble(

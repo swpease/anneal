@@ -86,12 +86,16 @@ anneal_cv_anneal <- function(data,
   id_args = modifyList(default_inner_digest_args, inner_digest_args)
 
   # Anneal args setup
+  # ref: https://stackoverflow.com/questions/61543007/non-recursive-version-of-modifylist
   default_anneal_args = list(
     range_start = -20,
     range_end = 20,
     loss_fn = list(slope_weighted_rmse = slope_weighted_rmse)
   )
-  anneal_args = modifyList(default_anneal_args, anneal_args)
+  # browser()
+  default_anneal_args[names(anneal_args)] = anneal_args
+  anneal_args = default_anneal_args
+
 
   # Getting .smoothed_obs col name
   smoothed_obs_col_name = data %>%
@@ -106,6 +110,15 @@ anneal_cv_anneal <- function(data,
   # in CV. It only really helps for a negative `tmax_offset`.
   # TODO: do I want to make this an option?
   data = data %>% append_row(n = (season_len + tmax_offset))
+  # This idx marks "now"; larger numbers are "future".
+  # Need to truncate outer digests to [0, idx_max] for use in annealing.
+  # Otherwise, you'll use "future" data for the loss calc.
+  idx_max = data %>%
+    as_tibble() %>%
+    ungroup() %>%
+    mutate(idx_d = row_number()) %>%
+    select(idx_d) %>%
+    max()
 
   outer_digest = data %>%
     digest(
@@ -146,10 +159,30 @@ anneal_cv_anneal <- function(data,
     # TODO: Is it's tsibble-ness used ever anymore?
     # In any case, need to pad back to t=1 from the adj_idx,
     # b/c `anneal` sets-up its own index using `row_number`.
-    test_frag = outer_digest %>%
+    full_test_frag = outer_digest %>%
       filter(k == k_idx) %>%
-      as_tsibble(index = adj_idx)
-    min_idx = test_frag %>% select(adj_idx) %>% min()
+      as_tsibble(index = adj_datetime)
+    # Truncate test_frag to exclude "future" data, via idx_max.
+    test_frag = outer_digest %>%
+      filter(
+        k == k_idx,
+        adj_idx <= idx_max
+      ) %>%
+      as_tsibble(index = adj_datetime)
+    # Not sure if this only arises in toy cases, but need more than
+    # one entry for a time *series*. tsibble raises an error.
+    if (nrow(test_frag) <= 1) {
+      warning(
+        paste("Fragment", k_idx, "has", nrow(test_frag), "rows. Skipping."),
+        call. = FALSE
+      )
+      next
+    }
+    min_idx = test_frag %>%
+      as_tibble() %>%
+      ungroup() %>%
+      select(adj_idx) %>%
+      min()
     test_frag = test_frag %>% append_row(-(min_idx - 1))
 
     train_frags = inner_digest %>% filter(k != k_idx)
@@ -163,7 +196,8 @@ anneal_cv_anneal <- function(data,
       )
     output_info$anneals[[k_idx]] = list(
       anneal_output = out,
-      test_data_outer_fragment = test_frag,
+      test_data_annealed_outer_fragment = test_frag,
+      full_test_data = full_test_frag,
       k_test = k_idx
     )
   }

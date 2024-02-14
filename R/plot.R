@@ -1,3 +1,110 @@
+#' Plot the min loss and original fragments from a CV anneal output.
+#'
+#' What a name! Does what it says on the tin.
+#'
+#' @param cv_out Output from `anneal_cv_anneal`.
+#' @param fragment_obs_col_name The name of the (possibly smoothed) observation column.
+#' @param t_max_offset x-axis upper bound, relative to "now"; i.e. amount of future
+#' to include in the plot.
+#'
+#' @export
+plot_cv_anneal_min_loss_and_orig_fragments <- function(cv_out,
+                                                       fragment_obs_col_name,
+                                                       t_max_offset = 35) {
+  for (annealing in cv_out$anneals) {
+    t_max = annealing$test_data_annealed_outer_fragment %>%
+      as_tibble() %>%
+      ungroup() %>%
+      pull(adj_datetime) %>%
+      max() + t_max_offset
+
+    # original frag plot
+    original_fragments = annealing$anneal_output$fragments %>%
+      filter(shift == 0) %>%
+      mutate(k = as.factor(k))
+
+    plt = ggplot() +
+      geom_line(
+        data = original_fragments,
+        mapping = aes(
+          x = final_datetime,
+          y = .data[[fragment_obs_col_name]],
+          color = k,
+        )
+      ) +
+      geom_line(
+        data = annealing$full_test_data,
+        mapping = aes(
+          x = .data$adj_datetime,
+          y = .data[[fragment_obs_col_name]]
+        ),
+        color = "#000000",
+        linetype = 2
+      ) +
+      geom_line(
+        data = annealing$test_data_annealed_outer_fragment,
+        mapping = aes(
+          x = .data$adj_datetime,
+          y = .data[[fragment_obs_col_name]]
+        ),
+        color = "#000000"
+      ) +
+      scale_x_date(limits = as.Date(c(NA, t_max))) +
+      xlab("Datetime") +
+      ylab("Predicted Observation") +
+      ggtitle(paste("Un-shifted Fragments, k =", annealing$k_test))
+
+    show(plt)
+
+    # min losses plot
+    min_losses = annealing$anneal_output$losses %>%
+      group_by(k) %>%
+      filter(loss == min(loss, na.rm = TRUE)) %>%
+      select(-loss)
+    min_loss_fragments = right_join(
+      annealing$anneal_output$fragments,
+      min_losses,
+      by = join_by(k, shift)
+    )
+    min_loss_fragments = min_loss_fragments %>%
+      mutate(k = as.factor(k))
+
+    plt = ggplot() +
+      geom_line(
+        data = min_loss_fragments,
+        mapping = aes(
+          x = final_datetime,
+          y = .data[[fragment_obs_col_name]],
+          color = k,
+        )
+      ) +
+      geom_line(
+        data = annealing$full_test_data,
+        mapping = aes(
+          x = .data$adj_datetime,
+          y = .data[[fragment_obs_col_name]]
+        ),
+        color = "#000000",
+        linetype = 2
+      ) +
+      geom_line(
+        data = annealing$test_data_annealed_outer_fragment,
+        mapping = aes(
+          x = .data$adj_datetime,
+          y = .data[[fragment_obs_col_name]]
+        ),
+        color = "#000000"
+      ) +
+      scale_x_date(limits = as.Date(c(NA, t_max))) +
+      xlab("Datetime") +
+      ylab("Predicted Observation") +
+      ggtitle(paste("Min Loss Fragments, k =", annealing$k_test))
+
+    show(plt)
+  }
+}
+
+
 #' Plot the min-loss shifted fragments against the original data.
 #'
 #' Useful for seeing what a forecast would look like,
